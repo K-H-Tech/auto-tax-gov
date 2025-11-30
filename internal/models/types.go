@@ -132,6 +132,10 @@ type Partner struct {
 	EndDate            string `json:"endDate,omitempty"`            // تاریخ پایان: 0 for ongoing (TextBoxMemberEndDate)
 	LicenseNumber      string `json:"licenseNumber,omitempty"`      // شماره مجوز وکالت (TextBoxMemberLicenseNumber)
 
+	// Spouse fields (for partnership cases)
+	SpouseNationalID string `json:"spouseNationalId,omitempty"` // شماره ملی همسر در صورت شراکت (TextBoxMemberHusbandWifeFidaCode)
+	SpouseBirthDate  string `json:"spouseBirthDate,omitempty"`  // تاریخ تولد همسر در صورت شراکت (TextBoxMemberHusbandWifeBirthdate)
+
 	// Contact fields (optional)
 	PostalCode string `json:"postalCode,omitempty"` // کد پستی (TextBoxMemberPostalCode)
 	Address    string `json:"address,omitempty"`    // آدرس (TextBoxMemberAddress)

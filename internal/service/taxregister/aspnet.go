@@ -282,3 +282,159 @@ func ExtractGUIDFromHTML(html string) string {
 	}
 	return ""
 }
+
+// ParseMembersForm extracts all ASP.NET form data from MembersEdit page HTML.
+func ParseMembersForm(html string) (*MembersFormData, error) {
+	form := &MembersFormData{
+		Fields:          make(map[string]string),
+		DropdownOptions: make(map[string][]DropdownOption),
+	}
+
+	// Extract __VIEWSTATE
+	if match := viewStatePattern.FindStringSubmatch(html); len(match) > 1 {
+		form.ViewState = match[1]
+	} else if match := viewStateAltPattern.FindStringSubmatch(html); len(match) > 1 {
+		form.ViewState = match[1]
+	}
+
+	if form.ViewState == "" {
+		return nil, fmt.Errorf("__VIEWSTATE not found in HTML")
+	}
+
+	// Extract __EVENTVALIDATION
+	if match := eventValidationPattern.FindStringSubmatch(html); len(match) > 1 {
+		form.EventValidation = match[1]
+	} else if match := eventValidationAltPattern.FindStringSubmatch(html); len(match) > 1 {
+		form.EventValidation = match[1]
+	}
+
+	if form.EventValidation == "" {
+		return nil, fmt.Errorf("__EVENTVALIDATION not found in HTML")
+	}
+
+	// Extract __VIEWSTATEGENERATOR (optional)
+	if match := viewStateGenPattern.FindStringSubmatch(html); len(match) > 1 {
+		form.ViewStateGenerator = match[1]
+	} else if match := viewStateGenAltPattern.FindStringSubmatch(html); len(match) > 1 {
+		form.ViewStateGenerator = match[1]
+	}
+
+	// Extract all dropdown options
+	selectMatches := selectPattern.FindAllStringSubmatch(html, -1)
+	for _, match := range selectMatches {
+		if len(match) >= 3 {
+			selectName := match[1]
+			selectContent := match[2]
+
+			var options []DropdownOption
+			optMatches := optionPattern.FindAllStringSubmatch(selectContent, -1)
+			for _, optMatch := range optMatches {
+				if len(optMatch) >= 3 {
+					options = append(options, DropdownOption{
+						Value: optMatch[1],
+						Label: strings.TrimSpace(optMatch[2]),
+					})
+				}
+			}
+			if len(options) > 0 {
+				form.DropdownOptions[selectName] = options
+			}
+		}
+	}
+
+	// Extract existing field values from input elements
+	inputPattern := regexp.MustCompile(`<input[^>]*name="([^"]*)"[^>]*value="([^"]*)"[^>]*>`)
+	inputAltPattern := regexp.MustCompile(`<input[^>]*value="([^"]*)"[^>]*name="([^"]*)"[^>]*>`)
+
+	inputMatches := inputPattern.FindAllStringSubmatch(html, -1)
+	for _, match := range inputMatches {
+		if len(match) >= 3 {
+			form.Fields[match[1]] = match[2]
+		}
+	}
+	inputAltMatches := inputAltPattern.FindAllStringSubmatch(html, -1)
+	for _, match := range inputAltMatches {
+		if len(match) >= 3 {
+			form.Fields[match[2]] = match[1]
+		}
+	}
+
+	return form, nil
+}
+
+// BuildMemberFormPayload builds URL-encoded form data for member submission.
+func BuildMemberFormPayload(form *MembersFormData, req *MemberSubmitRequest) url.Values {
+	payload := url.Values{}
+
+	// ASP.NET hidden fields
+	payload.Set("__VIEWSTATE", form.ViewState)
+	if form.ViewStateGenerator != "" {
+		payload.Set("__VIEWSTATEGENERATOR", form.ViewStateGenerator)
+	}
+	payload.Set("__EVENTVALIDATION", form.EventValidation)
+	payload.Set("__EVENTTARGET", "")
+	payload.Set("__EVENTARGUMENT", "")
+
+	// Identity fields (اطلاعات هویتی)
+	payload.Set("ctl00$CPC$DDLMemberType", req.PersonType)
+	payload.Set("ctl00$CPC$DDLMemberNationality", req.Nationality)
+	payload.Set("ctl00$CPC$TextBoxMemberNationalID", req.NationalID)
+	payload.Set("ctl00$CPC$TextBoxMemberBirthdate", req.BirthDate)
+	if req.BirthCountry != "" {
+		payload.Set("ctl00$CPC$DDLMemberCountryOfBorn", req.BirthCountry)
+	}
+	if req.NationalCardType != "" {
+		payload.Set("ctl00$CPC$DDLMemberNationalCardType", req.NationalCardType)
+	}
+	if req.NationalCardSerial != "" {
+		payload.Set("ctl00$CPC$TextboxMemberNationalCardSerial", req.NationalCardSerial)
+	}
+
+	// Financial fields (اطلاعات مالی)
+	payload.Set("ctl00$CPC$DDLMembershipType", req.MembershipType)
+	if req.IsResponsible != "" {
+		payload.Set("ctl00$CPC$DDLMemberResponsible", req.IsResponsible)
+	}
+	if req.SignatureAuthority != "" {
+		payload.Set("ctl00$CPC$DDLMemberRightSignFinancial", req.SignatureAuthority)
+	}
+	payload.Set("ctl00$CPC$DDLMemberRespondibilityType", req.ResponsibilityType)
+	payload.Set("ctl00$CPC$TextBoxMemberShares", req.SharePercent)
+	if req.Position != "" {
+		payload.Set("ctl00$CPC$DDLMemberPosition", req.Position)
+	}
+	payload.Set("ctl00$CPC$TextBoxMemberStartDate", req.StartDate)
+	if req.EndDate != "" {
+		payload.Set("ctl00$CPC$TextBoxMemberEndDate", req.EndDate)
+	}
+	if req.LicenseNumber != "" {
+		payload.Set("ctl00$CPC$TextBoxMemberLicenseNumber", req.LicenseNumber)
+	}
+	if req.SpouseNationalID != "" {
+		payload.Set("ctl00$CPC$TextBoxMemberHusbandWifeFidaCode", req.SpouseNationalID)
+	}
+	if req.SpouseBirthDate != "" {
+		payload.Set("ctl00$CPC$TextBoxMemberHusbandWifeBirthdate", req.SpouseBirthDate)
+	}
+
+	// Contact fields (اطلاعات تماس)
+	payload.Set("ctl00$CPC$TextBoxMemberPostalCode", req.PostalCode)
+	if req.Address != "" {
+		payload.Set("ctl00$CPC$TextBoxMemberAddress", req.Address)
+	}
+	if req.Phone != "" {
+		payload.Set("ctl00$CPC$TextBoxMemberTel", req.Phone)
+	}
+	if req.AreaCode != "" {
+		payload.Set("ctl00$CPC$TextBoxMemberTelCode", req.AreaCode)
+	}
+	payload.Set("ctl00$CPC$TextBoxMemberMobile", req.Mobile)
+	if req.Email != "" {
+		payload.Set("ctl00$CPC$TextBoxMemberEmail", req.Email)
+	}
+
+	// Submit button
+	payload.Set("ctl00$CPC$ButtonSave", "ثبت")
+
+	return payload
+}

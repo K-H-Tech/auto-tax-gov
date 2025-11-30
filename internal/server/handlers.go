@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -846,5 +847,490 @@ func (h *Handler) HandleExecuteFullFlow(w http.ResponseWriter, r *http.Request) 
 		Success: true,
 		Message: result.Message,
 		Data:    result,
+	})
+}
+
+// ==================== Members Form Handlers ====================
+
+// HandleGetMembersForm fetches the MembersEdit form for creating or editing a member.
+// GET /api/register/members/form?memberId={optional}
+func (h *Handler) HandleGetMembersForm(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	memberID := r.URL.Query().Get("memberId")
+
+	h.logger.Info("Fetching MembersEdit form", "memberId", memberID)
+
+	if !h.session.IsAuthenticated() {
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   "نشست احراز هویت نشده. لطفاً ابتدا وارد شوید.",
+		})
+		return
+	}
+
+	result, err := h.taxregister.GetMembersForm(h.session, memberID)
+	if err != nil {
+		h.logger.Error("GetMembersForm failed", "error", err)
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   err.Error(),
+		})
+		return
+	}
+
+	json.NewEncoder(w).Encode(models.APIResponse{
+		Success: true,
+		Data: map[string]interface{}{
+			"memberId":        result.MemberID,
+			"dropdownOptions": result.DropdownOptions,
+			"fields":          result.Fields,
+			"hasViewState":    result.ViewState != "",
+		},
+	})
+}
+
+// HandleSubmitMember submits a member form (create or update).
+// POST /api/register/members/submit
+func (h *Handler) HandleSubmitMember(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	var req taxregister.MemberSubmitRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   "درخواست نامعتبر است",
+		})
+		return
+	}
+
+	// Validate required fields
+	if req.NationalID == "" || req.Mobile == "" || req.PostalCode == "" {
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   "کد ملی، موبایل و کد پستی الزامی هستند",
+		})
+		return
+	}
+
+	h.logger.Info("Submitting member form", "nationalId", req.NationalID)
+
+	if !h.session.IsAuthenticated() {
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   "نشست احراز هویت نشده. لطفاً ابتدا وارد شوید.",
+		})
+		return
+	}
+
+	// First get the form to obtain ASP.NET state
+	memberID := r.URL.Query().Get("memberId")
+	form, err := h.taxregister.GetMembersForm(h.session, memberID)
+	if err != nil {
+		h.logger.Error("Failed to get members form", "error", err)
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   "خطا در دریافت فرم: " + err.Error(),
+		})
+		return
+	}
+
+	// Submit the member data
+	result, err := h.taxregister.SubmitMember(h.session, form, &req)
+	if err != nil {
+		h.logger.Error("SubmitMember failed", "error", err)
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   err.Error(),
+		})
+		return
+	}
+
+	json.NewEncoder(w).Encode(models.APIResponse{
+		Success: result.Success,
+		Message: result.Message,
+		Data: map[string]interface{}{
+			"memberId": result.MemberID,
+		},
+	})
+}
+
+// ==================== INTA Code Handlers ====================
+
+// HandleGetINTACodeOptions returns dropdown options for the INTA code cascade.
+// GET /api/register/inta-code/options
+func (h *Handler) HandleGetINTACodeOptions(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet && r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	if !h.session.IsAuthenticated() {
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   "نشست احراز هویت نشده. لطفاً ابتدا وارد شوید.",
+		})
+		return
+	}
+
+	var req models.INTACodeOptionsRequest
+
+	// Support both GET with query params and POST with body
+	if r.Method == http.MethodPost {
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			json.NewEncoder(w).Encode(models.APIResponse{
+				Success: false,
+				Error:   "درخواست نامعتبر است",
+			})
+			return
+		}
+	} else {
+		// GET request - parse from query string
+		req.RegistrationID = r.URL.Query().Get("registrationId")
+		// Levels would need to be parsed from JSON query param if needed
+	}
+
+	h.logger.Info("Fetching INTA code options", "registrationId", req.RegistrationID, "levels", len(req.Levels))
+
+	result, err := h.mytax.GetINTACodeOptions(h.session, &req)
+	if err != nil {
+		h.logger.Error("GetINTACodeOptions failed", "error", err)
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   err.Error(),
+		})
+		return
+	}
+
+	json.NewEncoder(w).Encode(models.APIResponse{
+		Success: true,
+		Data:    result,
+	})
+}
+
+// HandleSubmitINTACode submits INTA code activities.
+// POST /api/register/inta-code/submit
+func (h *Handler) HandleSubmitINTACode(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	var req models.INTACodeRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   "درخواست نامعتبر است",
+		})
+		return
+	}
+
+	// Validate activities
+	if len(req.Activities) == 0 {
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   "حداقل یک فعالیت باید وارد شود",
+		})
+		return
+	}
+
+	// Validate total percentage = 100%
+	totalPercent := 0
+	for _, activity := range req.Activities {
+		totalPercent += activity.Percent
+	}
+	if totalPercent != 100 {
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   "مجموع درصد فعالیت‌ها باید ۱۰۰٪ باشد",
+		})
+		return
+	}
+
+	h.logger.Info("Submitting INTA code activities",
+		"registrationId", req.RegistrationID,
+		"activityCount", len(req.Activities),
+	)
+
+	if !h.session.IsAuthenticated() {
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   "نشست احراز هویت نشده. لطفاً ابتدا وارد شوید.",
+		})
+		return
+	}
+
+	result, err := h.mytax.SubmitINTACode(h.session, &req)
+	if err != nil {
+		h.logger.Error("SubmitINTACode failed", "error", err)
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   err.Error(),
+		})
+		return
+	}
+
+	json.NewEncoder(w).Encode(models.APIResponse{
+		Success: result.Success,
+		Message: result.Message,
+	})
+}
+
+// ==================== Bank Account (SHEBA) Handlers ====================
+
+// HandleSubmitShebaNumber submits bank account (SHEBA) information.
+// POST /api/register/sheba/submit
+func (h *Handler) HandleSubmitShebaNumber(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	var req models.BankAccountsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   "درخواست نامعتبر است",
+		})
+		return
+	}
+
+	// Validate accounts
+	if len(req.Accounts) == 0 {
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   "حداقل یک حساب بانکی باید وارد شود",
+		})
+		return
+	}
+
+	// Validate each IBAN
+	for i, account := range req.Accounts {
+		iban := account.IBAN
+		// Remove IR prefix if present
+		if len(iban) >= 2 && (iban[:2] == "IR" || iban[:2] == "ir") {
+			iban = iban[2:]
+		}
+		if len(iban) != 24 {
+			json.NewEncoder(w).Encode(models.APIResponse{
+				Success: false,
+				Error:   fmt.Sprintf("شماره شبا حساب %d باید ۲۴ رقم باشد", i+1),
+			})
+			return
+		}
+	}
+
+	h.logger.Info("Submitting bank accounts",
+		"registrationId", req.RegistrationID,
+		"accountCount", len(req.Accounts),
+	)
+
+	if !h.session.IsAuthenticated() {
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   "نشست احراز هویت نشده. لطفاً ابتدا وارد شوید.",
+		})
+		return
+	}
+
+	result, err := h.mytax.SubmitBankAccounts(h.session, &req)
+	if err != nil {
+		h.logger.Error("SubmitBankAccounts failed", "error", err)
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   err.Error(),
+		})
+		return
+	}
+
+	json.NewEncoder(w).Encode(models.APIResponse{
+		Success: result.Success,
+		Message: result.Message,
+	})
+}
+
+// HandleGetShebaList returns the list of bank accounts for a registration.
+// GET /api/register/sheba/list
+func (h *Handler) HandleGetShebaList(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	if !h.session.IsAuthenticated() {
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   "نشست احراز هویت نشده. لطفاً ابتدا وارد شوید.",
+		})
+		return
+	}
+
+	registrationID := r.URL.Query().Get("registrationId")
+	h.logger.Info("Fetching bank accounts list", "registrationId", registrationID)
+
+	accounts, err := h.taxregister.GetShebaList(h.session, registrationID)
+	if err != nil {
+		h.logger.Error("GetShebaList failed", "error", err)
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   err.Error(),
+		})
+		return
+	}
+
+	json.NewEncoder(w).Encode(models.APIResponse{
+		Success: true,
+		Data:    accounts,
+	})
+}
+
+// HandleDeleteSheba deletes a bank account from a registration.
+// DELETE /api/register/sheba/delete
+func (h *Handler) HandleDeleteSheba(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete && r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	if !h.session.IsAuthenticated() {
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   "نشست احراز هویت نشده. لطفاً ابتدا وارد شوید.",
+		})
+		return
+	}
+
+	registrationID := r.URL.Query().Get("registrationId")
+	shebaID := r.URL.Query().Get("shebaId")
+
+	if shebaID == "" {
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   "شناسه حساب بانکی الزامی است",
+		})
+		return
+	}
+
+	h.logger.Info("Deleting bank account", "registrationId", registrationID, "shebaId", shebaID)
+
+	err := h.taxregister.DeleteSheba(h.session, registrationID, shebaID)
+	if err != nil {
+		h.logger.Error("DeleteSheba failed", "error", err)
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   err.Error(),
+		})
+		return
+	}
+
+	json.NewEncoder(w).Encode(models.APIResponse{
+		Success: true,
+		Message: "حساب بانکی با موفقیت حذف شد",
+	})
+}
+
+// ==================== Member List/Delete Handlers ====================
+
+// HandleListMembers returns the list of members for a registration.
+// GET /api/register/members/list
+func (h *Handler) HandleListMembers(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	if !h.session.IsAuthenticated() {
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   "نشست احراز هویت نشده. لطفاً ابتدا وارد شوید.",
+		})
+		return
+	}
+
+	registrationID := r.URL.Query().Get("registrationId")
+	h.logger.Info("Fetching members list", "registrationId", registrationID)
+
+	members, err := h.taxregister.ListMembers(h.session, registrationID)
+	if err != nil {
+		h.logger.Error("ListMembers failed", "error", err)
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   err.Error(),
+		})
+		return
+	}
+
+	json.NewEncoder(w).Encode(models.APIResponse{
+		Success: true,
+		Data:    members,
+	})
+}
+
+// HandleDeleteMember deletes a member from a registration.
+// DELETE /api/register/members/delete
+func (h *Handler) HandleDeleteMember(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete && r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	if !h.session.IsAuthenticated() {
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   "نشست احراز هویت نشده. لطفاً ابتدا وارد شوید.",
+		})
+		return
+	}
+
+	registrationID := r.URL.Query().Get("registrationId")
+	memberID := r.URL.Query().Get("memberId")
+
+	if memberID == "" {
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   "شناسه عضو الزامی است",
+		})
+		return
+	}
+
+	h.logger.Info("Deleting member", "registrationId", registrationID, "memberId", memberID)
+
+	err := h.taxregister.DeleteMember(h.session, registrationID, memberID)
+	if err != nil {
+		h.logger.Error("DeleteMember failed", "error", err)
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   err.Error(),
+		})
+		return
+	}
+
+	json.NewEncoder(w).Encode(models.APIResponse{
+		Success: true,
+		Message: "عضو با موفقیت حذف شد",
 	})
 }

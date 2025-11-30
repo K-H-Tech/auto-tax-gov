@@ -1193,10 +1193,81 @@
             </div>
         </div>
 
-        <!-- Step 4: Bank Accounts Section (حساب‌های بانکی) -->
+        <!-- Step 5: INTA Code Section (اینتاکد فعالیت) -->
+        <div id="intaCodeSection" style="display: none;">
+            <div class="header" style="margin-bottom: 24px;">
+                <h1>اینتاکد فعالیت</h1>
+                <p>کد استاندارد فعالیت اقتصادی (مجموع درصدها باید ۱۰۰٪ باشد)</p>
+            </div>
+
+            <div id="intaCodeFormContainer">
+                <div class="card-list" id="intaCodeList">
+                    <!-- INTA code cards will be added here dynamically -->
+                </div>
+
+                <button type="button" class="btn-add" onclick="addIntaCode()">
+                    + افزودن کد فعالیت جدید
+                </button>
+
+                <div class="share-total" id="intaCodeTotal">
+                    مجموع درصد فعالیت: <strong id="intaCodeTotalValue">۰</strong>٪ (باید ۱۰۰٪ باشد)
+                </div>
+
+                <button type="button" class="btn-primary" id="intaCodeBtn" onclick="submitIntaCodes()">
+                    ثبت اینتاکد و ادامه
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 6: VAT Status Section (مشمولیت ارزش افزوده) -->
+        <div id="vatStatusSection" style="display: none;">
+            <div class="header" style="margin-bottom: 24px;">
+                <h1>مشمولیت ارزش افزوده</h1>
+                <p>تعیین وضعیت مشمولیت مالیات بر ارزش افزوده</p>
+            </div>
+
+            <form id="vatStatusForm">
+                <div class="form-group">
+                    <label for="vatEligibilityStatus">وضعیت مشمولیت مودی <span style="color: var(--color-error);">*</span></label>
+                    <select id="vatEligibilityStatus" name="vatEligibilityStatus" required>
+                        <option value="" disabled selected>انتخاب کنید...</option>
+                        <option value="exempt">معاف</option>
+                        <option value="subject">مشمول</option>
+                        <option value="not_subject">غیرمشمول</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="vatFirstStageType">نوع مشمول مرحله اول</label>
+                    <select id="vatFirstStageType" name="vatFirstStageType">
+                        <option value="" disabled selected>انتخاب کنید...</option>
+                        <option value="mandatory">اجباری</option>
+                        <option value="voluntary">داوطلبانه</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="vatEligibilityDate">تاریخ مشمولیت</label>
+                    <input type="text" id="vatEligibilityDate" name="vatEligibilityDate"
+                           placeholder="برای انتخاب تاریخ کلیک کنید"
+                           readonly style="direction: ltr; text-align: left; cursor: pointer;">
+                </div>
+
+                <div class="form-group">
+                    <label for="salesAmount">فروش و عرضه کالا و خدمات (ریال)</label>
+                    <input type="text" id="salesAmount" name="salesAmount"
+                           placeholder="مبلغ فروش سالانه"
+                           inputmode="numeric" style="direction: ltr; text-align: left;">
+                </div>
+
+                <button type="submit" class="btn-primary" id="vatStatusBtn">ثبت وضعیت و ادامه</button>
+            </form>
+        </div>
+
+        <!-- Step 7: Bank Accounts Section (حساب‌های تجاری) -->
         <div id="accountsSection" style="display: none;">
             <div class="header" style="margin-bottom: 24px;">
-                <h1>حساب‌های بانکی</h1>
+                <h1>حساب‌های تجاری</h1>
                 <p>حساب‌های بانکی مرتبط با کسب‌وکار</p>
             </div>
 
@@ -1210,9 +1281,87 @@
                 </button>
 
                 <button type="button" class="btn-primary" id="accountsBtn" onclick="submitBankAccounts()">
-                    ثبت حساب‌ها و اتمام
+                    ثبت حساب‌ها و ادامه
                 </button>
             </div>
+        </div>
+
+        <!-- Step 8: Geo Location Section (موقعیت جغرافیایی) -->
+        <div id="geoLocationSection" style="display: none;">
+            <div class="header" style="margin-bottom: 24px;">
+                <h1>موقعیت جغرافیایی</h1>
+                <p>مختصات محل فعالیت کسب‌وکار روی نقشه</p>
+            </div>
+
+            <form id="geoLocationForm">
+                <div class="form-group">
+                    <label for="latitude">عرض جغرافیایی (Latitude) <span style="color: var(--color-error);">*</span></label>
+                    <input type="text" id="latitude" name="latitude"
+                           placeholder="مثال: 35.6892"
+                           inputmode="decimal" pattern="-?[0-9]*\.?[0-9]+"
+                           style="direction: ltr; text-align: left;" required>
+                    <p class="hint">مثال: 35.6892 برای تهران</p>
+                </div>
+
+                <div class="form-group">
+                    <label for="longitude">طول جغرافیایی (Longitude) <span style="color: var(--color-error);">*</span></label>
+                    <input type="text" id="longitude" name="longitude"
+                           placeholder="مثال: 51.3890"
+                           inputmode="decimal" pattern="-?[0-9]*\.?[0-9]+"
+                           style="direction: ltr; text-align: left;" required>
+                    <p class="hint">مثال: 51.3890 برای تهران</p>
+                </div>
+
+                <div class="form-group" style="background: #f0f9ff; border: 1px solid #0ea5e9; border-radius: var(--radius-md); padding: 16px; margin-bottom: 20px;">
+                    <p style="color: #0369a1; font-size: 14px; margin: 0;">
+                        <strong>راهنما:</strong> برای پیدا کردن مختصات، می‌توانید از Google Maps استفاده کنید:
+                        <br>۱. به maps.google.com بروید
+                        <br>۲. روی محل کسب‌وکار راست‌کلیک کنید
+                        <br>۳. مختصات را کپی کنید (اولین عدد = عرض، دومین عدد = طول)
+                    </p>
+                </div>
+
+                <button type="submit" class="btn-primary" id="geoLocationBtn">ثبت موقعیت و ادامه</button>
+            </form>
+        </div>
+
+        <!-- Step 9: Final Confirmation Section (تایید نهایی) -->
+        <div id="finalConfirmSection" style="display: none;">
+            <div class="header" style="margin-bottom: 24px;">
+                <h1>تایید نهایی</h1>
+                <p>بررسی نهایی و ارسال درخواست ثبت‌نام</p>
+            </div>
+
+            <div id="deficienciesList" class="help-panel" style="display: none; background: #fef2f2; border-color: #fecaca;">
+                <div class="help-header">
+                    <span class="help-icon">⚠️</span>
+                    <h3 style="color: #991b1b;">نواقص موجود</h3>
+                </div>
+                <div class="help-content">
+                    <p style="color: #dc2626;">لطفاً قبل از تایید نهایی، نواقص زیر را برطرف کنید:</p>
+                    <ul id="deficiencyItems" style="color: #991b1b; padding-right: 20px;">
+                        <!-- Deficiency items will be populated dynamically -->
+                    </ul>
+                </div>
+            </div>
+
+            <div id="confirmationSummary" style="background: #f0fdf4; border: 1px solid #86efac; border-radius: var(--radius-md); padding: 20px; margin-bottom: 20px;">
+                <h3 style="color: #166534; margin-bottom: 12px;">خلاصه اطلاعات ثبت‌نام</h3>
+                <div id="summaryContent" style="color: #15803d; font-size: 14px; line-height: 1.8;">
+                    <!-- Summary will be populated dynamically -->
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="checkbox" id="confirmAccuracy" style="width: 20px; height: 20px;">
+                    <span>صحت اطلاعات وارد شده را تأیید می‌کنم <span style="color: var(--color-error);">*</span></span>
+                </label>
+            </div>
+
+            <button type="button" class="btn-primary" id="finalConfirmBtn" onclick="submitFinalConfirmation()" disabled>
+                تایید نهایی و ارسال درخواست
+            </button>
         </div>
 
         <!-- Progress Tracker -->
@@ -1233,18 +1382,25 @@
         let userMobile = '';
 
         // Progress Step Definitions (post-login steps only)
+        // Matches register.tax.gov.ir/Pages/Preaction/HomePage flow
         const STEPS = [
             { id: 1, label: 'دسترسی به داشبورد' },
             { id: 2, label: 'شروع پرونده مالیاتی' },
-            { id: 3, label: 'ثبت اطلاعات پایه' },
-            { id: 4, label: 'شرکا و اعضا' },
-            { id: 5, label: 'حساب‌های بانکی' }
+            { id: 3, label: 'اطلاعات پایه ثبت‌نام' },
+            { id: 4, label: 'اعضاء و شرکاء' },
+            { id: 5, label: 'اینتاکد فعالیت' },
+            { id: 6, label: 'مشمولیت ارزش افزوده' },
+            { id: 7, label: 'حساب‌های تجاری' },
+            { id: 8, label: 'موقعیت جغرافیایی' },
+            { id: 9, label: 'تایید نهایی' }
         ];
 
         // Registration type (Single/Company) - set when tax file is started
         let registrationType = 'Single';
         // Partner counter for unique IDs
         let partnerCounter = 0;
+        // INTA code counter for unique IDs
+        let intaCodeCounter = 0;
         // Account counter for unique IDs
         let accountCounter = 0;
         // Registration ID pending deletion (when there's an incomplete registration)
@@ -2097,13 +2253,13 @@
             }
         }
 
-        // Skip partners section (for individual businesses)
+        // Skip partners section (for individual businesses) - go to INTA Code
         function skipToAccounts() {
             stepState.setCompleted(4);
             document.getElementById('partnersSection').style.display = 'none';
-            document.getElementById('accountsSection').style.display = 'block';
-            // Add first account card
-            addAccount();
+            document.getElementById('intaCodeSection').style.display = 'block';
+            // Add first INTA code card
+            addIntaCode();
         }
 
         // Collect partner data from cards
@@ -2185,11 +2341,11 @@
                 if (data.success) {
                     stepState.setCompleted(4);
                     showStatus(data.message || 'شرکا با موفقیت ثبت شدند', 'success');
-                    // Hide partners section and show accounts section
+                    // Hide partners section and show INTA Code section
                     document.getElementById('partnersSection').style.display = 'none';
-                    document.getElementById('accountsSection').style.display = 'block';
-                    // Add first account card
-                    addAccount();
+                    document.getElementById('intaCodeSection').style.display = 'block';
+                    // Add first INTA code card
+                    addIntaCode();
                 } else {
                     stepState.setError(4, data.error || 'ثبت ناموفق');
                     showStatus('خطا: ' + (data.error || 'ثبت ناموفق'), 'error');
@@ -2203,7 +2359,7 @@
         }
 
         // =====================
-        // BANK ACCOUNTS MANAGEMENT (Step 5)
+        // BANK ACCOUNTS MANAGEMENT (Step 7)
         // =====================
 
         // Add a new account card
@@ -2325,10 +2481,10 @@
             const accountsBtn = document.getElementById('accountsBtn');
             accountsBtn.disabled = true;
             showStatus('در حال ثبت حساب‌های بانکی...', 'loading');
-            stepState.setActive(5);
+            stepState.setActive(7);
 
             try {
-                const response = await fetch('/api/submit-bank-accounts', {
+                const response = await fetch('/api/register/sheba/submit', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ accounts: accounts })
@@ -2337,10 +2493,383 @@
                 const data = await response.json();
 
                 if (data.success) {
+                    stepState.setCompleted(7);
+                    showStatus(data.message || 'حساب‌های بانکی با موفقیت ثبت شدند', 'success');
+                    // Hide accounts section and show geo location section
+                    document.getElementById('accountsSection').style.display = 'none';
+                    document.getElementById('geoLocationSection').style.display = 'block';
+                } else {
+                    stepState.setError(7, data.error || 'ثبت ناموفق');
+                    showStatus('خطا: ' + (data.error || 'ثبت ناموفق'), 'error');
+                    accountsBtn.disabled = false;
+                }
+            } catch (error) {
+                stepState.setError(7, error.message);
+                showStatus('خطا: ' + error.message, 'error');
+                accountsBtn.disabled = false;
+            }
+        }
+
+        // =====================
+        // INTA CODE MANAGEMENT (Step 5)
+        // =====================
+
+        // Add a new INTA code card
+        function addIntaCode() {
+            intaCodeCounter++;
+            const intaId = intaCodeCounter;
+            const intaCodeList = document.getElementById('intaCodeList');
+
+            const card = document.createElement('div');
+            card.className = 'partner-card';
+            card.id = `inta-${intaId}`;
+            card.innerHTML = `
+                <div class="card-header">
+                    <span class="card-title">کد فعالیت ${toPersianNum(intaId)}</span>
+                    <button type="button" class="btn-remove" onclick="removeIntaCode(${intaId})">حذف</button>
+                </div>
+                <div class="card-row">
+                    <div class="form-group">
+                        <label>کد استاندارد فعالیت <span style="color: var(--color-error);">*</span></label>
+                        <input type="text" id="inta-code-${intaId}"
+                               placeholder="مثال: 4711"
+                               maxlength="10"
+                               style="direction: ltr; text-align: left;">
+                        <p class="hint">کد ISIC یا کد فعالیت اقتصادی</p>
+                    </div>
+                    <div class="form-group small">
+                        <label>درصد <span style="color: var(--color-error);">*</span></label>
+                        <input type="number" id="inta-percent-${intaId}"
+                               placeholder="۰" min="1" max="100"
+                               style="direction: ltr; text-align: center;"
+                               onchange="updateIntaCodeTotal()">
+                    </div>
+                </div>
+                <div class="card-row">
+                    <div class="form-group">
+                        <label>توضیحات فعالیت</label>
+                        <input type="text" id="inta-desc-${intaId}"
+                               placeholder="شرح فعالیت"
+                               style="direction: rtl; text-align: right;">
+                    </div>
+                </div>
+                <div class="card-row">
+                    <div class="form-group">
+                        <label>نوع فعالیت <span style="color: var(--color-error);">*</span></label>
+                        <select id="inta-type-${intaId}">
+                            <option value="" disabled selected>انتخاب کنید...</option>
+                            <option value="production">تولیدی</option>
+                            <option value="service">خدماتی</option>
+                            <option value="commercial">بازرگانی</option>
+                            <option value="mixed">ترکیبی</option>
+                        </select>
+                    </div>
+                </div>
+            `;
+
+            intaCodeList.appendChild(card);
+            updateIntaCodeTotal();
+        }
+
+        // Remove an INTA code card
+        function removeIntaCode(intaId) {
+            const card = document.getElementById(`inta-${intaId}`);
+            if (card) {
+                card.remove();
+                updateIntaCodeTotal();
+            }
+        }
+
+        // Update INTA code total display
+        function updateIntaCodeTotal() {
+            const cards = document.querySelectorAll('#intaCodeList .partner-card');
+            let total = 0;
+
+            cards.forEach(card => {
+                const percentInput = card.querySelector('input[type="number"]');
+                if (percentInput && percentInput.value) {
+                    total += parseInt(percentInput.value, 10) || 0;
+                }
+            });
+
+            const totalElement = document.getElementById('intaCodeTotalValue');
+            const containerElement = document.getElementById('intaCodeTotal');
+
+            totalElement.textContent = toPersianNum(total);
+
+            // Update styling based on total
+            containerElement.classList.remove('error', 'success');
+            if (total === 100) {
+                containerElement.classList.add('success');
+            } else if (total > 100) {
+                containerElement.classList.add('error');
+            }
+        }
+
+        // Collect INTA code data from cards
+        function collectIntaCodeData() {
+            const cards = document.querySelectorAll('#intaCodeList .partner-card');
+            const intaCodes = [];
+
+            cards.forEach(card => {
+                const id = card.id.replace('inta-', '');
+                const code = document.getElementById(`inta-code-${id}`).value;
+                const percent = parseInt(document.getElementById(`inta-percent-${id}`).value, 10) || 0;
+                const description = document.getElementById(`inta-desc-${id}`).value;
+                const activityType = document.getElementById(`inta-type-${id}`).value;
+
+                intaCodes.push({ code, percent, description, activityType });
+            });
+
+            return intaCodes;
+        }
+
+        // Submit INTA codes
+        async function submitIntaCodes() {
+            const intaCodes = collectIntaCodeData();
+
+            // Validate INTA codes
+            if (intaCodes.length === 0) {
+                showStatus('لطفاً حداقل یک کد فعالیت اضافه کنید', 'error');
+                return;
+            }
+
+            // Validate percentage total
+            const totalPercent = intaCodes.reduce((sum, i) => sum + i.percent, 0);
+            if (totalPercent !== 100) {
+                showStatus('مجموع درصد فعالیت‌ها باید ۱۰۰٪ باشد', 'error');
+                return;
+            }
+
+            // Validate each INTA code
+            for (let i = 0; i < intaCodes.length; i++) {
+                const ic = intaCodes[i];
+                if (!ic.code) {
+                    showStatus(`کد فعالیت ${toPersianNum(i + 1)} را وارد کنید`, 'error');
+                    return;
+                }
+                if (!ic.activityType) {
+                    showStatus(`نوع فعالیت ${toPersianNum(i + 1)} را انتخاب کنید`, 'error');
+                    return;
+                }
+            }
+
+            const intaCodeBtn = document.getElementById('intaCodeBtn');
+            intaCodeBtn.disabled = true;
+            showStatus('در حال ثبت اینتاکد...', 'loading');
+            stepState.setActive(5);
+
+            try {
+                const response = await fetch('/api/register/inta-code/submit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ intaCodes: intaCodes })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
                     stepState.setCompleted(5);
+                    showStatus(data.message || 'اینتاکد با موفقیت ثبت شد', 'success');
+                    // Hide INTA code section and show VAT status section
+                    document.getElementById('intaCodeSection').style.display = 'none';
+                    document.getElementById('vatStatusSection').style.display = 'block';
+                    // Initialize VAT date picker
+                    initVatDatePicker();
+                } else {
+                    stepState.setError(5, data.error || 'ثبت ناموفق');
+                    showStatus('خطا: ' + (data.error || 'ثبت ناموفق'), 'error');
+                    intaCodeBtn.disabled = false;
+                }
+            } catch (error) {
+                stepState.setError(5, error.message);
+                showStatus('خطا: ' + error.message, 'error');
+                intaCodeBtn.disabled = false;
+            }
+        }
+
+        // =====================
+        // VAT STATUS MANAGEMENT (Step 6)
+        // =====================
+
+        // Initialize Persian date picker for VAT eligibility date
+        function initVatDatePicker() {
+            if (typeof $ !== 'undefined' && $.fn.persianDatepicker) {
+                $('#vatEligibilityDate').persianDatepicker({
+                    format: 'YYYY/MM/DD',
+                    persianDigit: false,
+                    autoClose: true,
+                    initialValue: false,
+                    toolbox: {
+                        calendarSwitch: { enabled: false },
+                        todayButton: { enabled: true, text: { fa: 'امروز' } },
+                        submitButton: { enabled: true, text: { fa: 'تایید' } }
+                    },
+                    dayPicker: { enabled: true },
+                    monthPicker: { enabled: true },
+                    yearPicker: { enabled: true },
+                    responsive: true
+                });
+            }
+        }
+
+        // VAT status form submission
+        document.getElementById('vatStatusForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const vatStatusBtn = document.getElementById('vatStatusBtn');
+            vatStatusBtn.disabled = true;
+            showStatus('در حال ثبت وضعیت ارزش افزوده...', 'loading');
+            stepState.setActive(6);
+
+            const formData = {
+                eligibilityStatus: document.getElementById('vatEligibilityStatus').value,
+                firstStageType: document.getElementById('vatFirstStageType').value,
+                eligibilityDate: persianToEnglishDigits(document.getElementById('vatEligibilityDate').value),
+                salesAmount: document.getElementById('salesAmount').value
+            };
+
+            try {
+                const response = await fetch('/api/register/vat-status/submit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    stepState.setCompleted(6);
+                    showStatus(data.message || 'وضعیت ارزش افزوده با موفقیت ثبت شد', 'success');
+                    // Hide VAT status section and show accounts section
+                    document.getElementById('vatStatusSection').style.display = 'none';
+                    document.getElementById('accountsSection').style.display = 'block';
+                    // Add first account card
+                    addAccount();
+                } else {
+                    stepState.setError(6, data.error || 'ثبت ناموفق');
+                    showStatus('خطا: ' + (data.error || 'ثبت ناموفق'), 'error');
+                    vatStatusBtn.disabled = false;
+                }
+            } catch (error) {
+                stepState.setError(6, error.message);
+                showStatus('خطا: ' + error.message, 'error');
+                vatStatusBtn.disabled = false;
+            }
+        });
+
+        // =====================
+        // GEO LOCATION MANAGEMENT (Step 8)
+        // =====================
+
+        // Geo location form submission
+        document.getElementById('geoLocationForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const latitude = document.getElementById('latitude').value;
+            const longitude = document.getElementById('longitude').value;
+
+            // Basic validation
+            if (!latitude || !longitude) {
+                showStatus('لطفاً مختصات جغرافیایی را وارد کنید', 'error');
+                return;
+            }
+
+            // Validate coordinate ranges
+            const lat = parseFloat(latitude);
+            const lng = parseFloat(longitude);
+            if (isNaN(lat) || lat < -90 || lat > 90) {
+                showStatus('عرض جغرافیایی باید بین -۹۰ و ۹۰ باشد', 'error');
+                return;
+            }
+            if (isNaN(lng) || lng < -180 || lng > 180) {
+                showStatus('طول جغرافیایی باید بین -۱۸۰ و ۱۸۰ باشد', 'error');
+                return;
+            }
+
+            const geoLocationBtn = document.getElementById('geoLocationBtn');
+            geoLocationBtn.disabled = true;
+            showStatus('در حال ثبت موقعیت جغرافیایی...', 'loading');
+            stepState.setActive(8);
+
+            try {
+                const response = await fetch('/api/register/geo-location/submit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ latitude: lat, longitude: lng })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    stepState.setCompleted(8);
+                    showStatus(data.message || 'موقعیت جغرافیایی با موفقیت ثبت شد', 'success');
+                    // Hide geo location section and show final confirmation section
+                    document.getElementById('geoLocationSection').style.display = 'none';
+                    document.getElementById('finalConfirmSection').style.display = 'block';
+                    // Populate summary and enable confirmation
+                    populateConfirmationSummary();
+                } else {
+                    stepState.setError(8, data.error || 'ثبت ناموفق');
+                    showStatus('خطا: ' + (data.error || 'ثبت ناموفق'), 'error');
+                    geoLocationBtn.disabled = false;
+                }
+            } catch (error) {
+                stepState.setError(8, error.message);
+                showStatus('خطا: ' + error.message, 'error');
+                geoLocationBtn.disabled = false;
+            }
+        });
+
+        // =====================
+        // FINAL CONFIRMATION (Step 9)
+        // =====================
+
+        // Populate confirmation summary
+        function populateConfirmationSummary() {
+            const summaryContent = document.getElementById('summaryContent');
+            summaryContent.innerHTML = `
+                <p>✓ اطلاعات پایه ثبت‌نام تکمیل شده</p>
+                <p>✓ اطلاعات اعضاء و شرکاء ثبت شده</p>
+                <p>✓ اینتاکد فعالیت تعیین شده</p>
+                <p>✓ وضعیت مشمولیت ارزش افزوده مشخص شده</p>
+                <p>✓ حساب‌های تجاری ثبت شده</p>
+                <p>✓ موقعیت جغرافیایی ثبت شده</p>
+            `;
+        }
+
+        // Enable/disable final confirm button based on checkbox
+        document.getElementById('confirmAccuracy').addEventListener('change', (e) => {
+            document.getElementById('finalConfirmBtn').disabled = !e.target.checked;
+        });
+
+        // Submit final confirmation
+        async function submitFinalConfirmation() {
+            const confirmCheckbox = document.getElementById('confirmAccuracy');
+            if (!confirmCheckbox.checked) {
+                showStatus('لطفاً صحت اطلاعات را تأیید کنید', 'error');
+                return;
+            }
+
+            const finalConfirmBtn = document.getElementById('finalConfirmBtn');
+            finalConfirmBtn.disabled = true;
+            showStatus('در حال ارسال تأیید نهایی...', 'loading');
+            stepState.setActive(9);
+
+            try {
+                const response = await fetch('/api/register/final-confirm', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ confirmed: true })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    stepState.setCompleted(9);
                     showStatus(data.message || 'ثبت‌نام با موفقیت تکمیل شد!', 'success');
                     // Show completion message
-                    document.getElementById('accountsFormContainer').innerHTML = `
+                    document.getElementById('finalConfirmSection').innerHTML = `
                         <div style="text-align: center; padding: 40px 20px;">
                             <div style="font-size: 48px; margin-bottom: 16px;">✅</div>
                             <h2 style="color: var(--color-success); margin-bottom: 8px;">ثبت‌نام تکمیل شد</h2>
@@ -2351,14 +2880,16 @@
                         </div>
                     `;
                 } else {
-                    stepState.setError(5, data.error || 'ثبت ناموفق');
+                    stepState.setError(9, data.error || 'ثبت ناموفق');
                     showStatus('خطا: ' + (data.error || 'ثبت ناموفق'), 'error');
-                    accountsBtn.disabled = false;
+                    finalConfirmBtn.disabled = false;
+                    confirmCheckbox.checked = false;
                 }
             } catch (error) {
-                stepState.setError(5, error.message);
+                stepState.setError(9, error.message);
                 showStatus('خطا: ' + error.message, 'error');
-                accountsBtn.disabled = false;
+                finalConfirmBtn.disabled = false;
+                confirmCheckbox.checked = false;
             }
         }
 

@@ -56,6 +56,21 @@ func New(cfg *config.Config, logger *slog.Logger, webDir string) *Server {
 	mux.HandleFunc("/api/register/public-data-form", h.HandleGetPublicDataForm)
 	mux.HandleFunc("/api/register/full-flow", h.HandleExecuteFullFlow)
 
+	// Members Form API routes
+	mux.HandleFunc("/api/register/members/form", h.HandleGetMembersForm)
+	mux.HandleFunc("/api/register/members/submit", h.HandleSubmitMember)
+	mux.HandleFunc("/api/register/members/list", h.HandleListMembers)
+	mux.HandleFunc("/api/register/members/delete", h.HandleDeleteMember)
+
+	// INTA Code API routes
+	mux.HandleFunc("/api/register/inta-code/options", h.HandleGetINTACodeOptions)
+	mux.HandleFunc("/api/register/inta-code/submit", h.HandleSubmitINTACode)
+
+	// Bank Account (SHEBA) API routes
+	mux.HandleFunc("/api/register/sheba/submit", h.HandleSubmitShebaNumber)
+	mux.HandleFunc("/api/register/sheba/list", h.HandleGetShebaList)
+	mux.HandleFunc("/api/register/sheba/delete", h.HandleDeleteSheba)
+
 	server := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Server.Port),
 		Handler:      mux,

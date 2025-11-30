@@ -128,3 +128,84 @@ type StepResult struct {
 	Message string `json:"message,omitempty"`
 	URL     string `json:"url,omitempty"`
 }
+
+// MembersFormData contains the ASP.NET form state from MembersEdit page.
+type MembersFormData struct {
+	// ASP.NET hidden fields
+	ViewState          string `json:"viewState"`
+	ViewStateGenerator string `json:"viewStateGenerator"`
+	EventValidation    string `json:"eventValidation"`
+
+	// Member ID (GUID) - empty for new member
+	MemberID string `json:"memberId,omitempty"`
+
+	// Current field values (if editing existing member)
+	Fields map[string]string `json:"fields,omitempty"`
+
+	// Available dropdown options
+	DropdownOptions map[string][]DropdownOption `json:"dropdownOptions,omitempty"`
+}
+
+// MemberSubmitRequest contains form data for submitting a member.
+type MemberSubmitRequest struct {
+	// ASP.NET state from MembersFormData
+	ViewState          string `json:"viewState"`
+	ViewStateGenerator string `json:"viewStateGenerator"`
+	EventValidation    string `json:"eventValidation"`
+
+	// Identity fields (اطلاعات هویتی)
+	PersonType         string `json:"personType"`                   // DDLMemberType: 1=حقیقی, 2=حقوقی
+	Nationality        string `json:"nationality"`                  // DDLMemberNationality: 33=ایران
+	NationalID         string `json:"nationalId"`                   // TextBoxMemberNationalID
+	BirthDate          string `json:"birthDate"`                    // TextBoxMemberBirthdate (Jalali)
+	BirthCountry       string `json:"birthCountry,omitempty"`       // DDLMemberCountryOfBorn
+	NationalCardType   string `json:"nationalCardType,omitempty"`   // DDLMemberNationalCardType: 1=قدیم, 2=هوشمند
+	NationalCardSerial string `json:"nationalCardSerial,omitempty"` // TextboxMemberNationalCardSerial
+
+	// Financial fields (اطلاعات مالی)
+	MembershipType     string `json:"membershipType"`               // DDLMembershipType: 0=اختیاری, 1=قهری
+	IsResponsible      string `json:"isResponsible,omitempty"`      // DDLMemberResponsible: 0=خیر, 1=بله
+	SignatureAuthority string `json:"signatureAuthority,omitempty"` // DDLMemberRightSignFinancial: 0=ندارد, 1=دارد
+	ResponsibilityType string `json:"responsibilityType"`           // DDLMemberRespondibilityType: 0-5
+	SharePercent       string `json:"sharePercent"`                 // TextBoxMemberShares (percentage)
+	Position           string `json:"position,omitempty"`           // DDLMemberPosition: 1,7,8,9
+	StartDate          string `json:"startDate"`                    // TextBoxMemberStartDate (Jalali)
+	EndDate            string `json:"endDate,omitempty"`            // TextBoxMemberEndDate: 0 for ongoing
+	LicenseNumber      string `json:"licenseNumber,omitempty"`      // TextBoxMemberLicenseNumber
+	SpouseNationalID   string `json:"spouseNationalId,omitempty"`   // TextBoxMemberHusbandWifeFidaCode
+	SpouseBirthDate    string `json:"spouseBirthDate,omitempty"`    // TextBoxMemberHusbandWifeBirthdate
+
+	// Contact fields (اطلاعات تماس)
+	PostalCode string `json:"postalCode"`         // TextBoxMemberPostalCode
+	Address    string `json:"address,omitempty"`  // TextBoxMemberAddress
+	Phone      string `json:"phone,omitempty"`    // TextBoxMemberTel
+	AreaCode   string `json:"areaCode,omitempty"` // TextBoxMemberTelCode
+	Mobile     string `json:"mobile"`             // TextBoxMemberMobile
+	Email      string `json:"email,omitempty"`    // TextBoxMemberEmail
+}
+
+// MemberSubmitResponse is the response from member submission.
+type MemberSubmitResponse struct {
+	Success  bool   `json:"success"`
+	MemberID string `json:"memberId,omitempty"`
+	Message  string `json:"message,omitempty"`
+}
+
+// MemberInfo represents a member in the list view (from MembersEdit page).
+type MemberInfo struct {
+	ID           string `json:"id"`           // Member GUID
+	PersonType   string `json:"personType"`   // حقیقی/حقوقی
+	Name         string `json:"name"`         // نام و نام خانوادگی
+	NationalID   string `json:"nationalId"`   // شماره ملی/شناسه ملی
+	Position     string `json:"position"`     // سمت
+	SharePercent int    `json:"sharePercent"` // درصد سهام
+	Status       string `json:"status"`       // وضعیت
+}
+
+// BankAccountInfo represents a bank account in the list view (from AddShebaNumber page).
+type BankAccountInfo struct {
+	ID        string `json:"id"`        // Account row ID
+	IBAN      string `json:"iban"`      // شماره شبا
+	StartDate string `json:"startDate"` // تاریخ شروع استفاده
+	Status    string `json:"status"`    // وضعیت
+}

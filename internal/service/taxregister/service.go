@@ -3,6 +3,7 @@ package taxregister
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -632,10 +633,344 @@ func (s *Service) GetConfig() *config.Config {
 	return s.cfg
 }
 
+// GetMembersForm fetches the MembersEdit form and extracts ASP.NET state.
+// GET https://register.tax.gov.ir/Pages/Preaction/MembersEdit or MembersEdit/{memberID}
+func (s *Service) GetMembersForm(sess *session.Session, memberID string) (*MembersFormData, error) {
+	membersURL := s.cfg.Services.RegisterTax.MembersEditURL
+	if memberID != "" {
+		membersURL = strings.TrimSuffix(membersURL, "/") + "/" + memberID
+	}
+
+	httpReq, err := http.NewRequest("GET", membersURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("error creating MembersEdit request: %w", err)
+	}
+
+	s.client.SetNavigationHeaders(httpReq, s.cfg.Services.RegisterTax.HomePageURL)
+	s.client.AddCookies(httpReq, sess.GetCookies())
+
+	s.logger.Info("GetMembersForm: Fetching members edit form",
+		"url", membersURL,
+		"memberID", memberID)
+
+	resp, err := s.client.Do(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching MembersEdit form: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Save cookies
+	if cookies := resp.Cookies(); len(cookies) > 0 {
+		sess.MergeCookies(cookies)
+	}
+
+	if resp.StatusCode == 302 {
+		location := resp.Header.Get("Location")
+		if strings.Contains(location, "/Login") {
+			return nil, fmt.Errorf("not authenticated - redirected to login page")
+		}
+		return nil, fmt.Errorf("MembersEdit redirected to %s", location)
+	}
+
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("MembersEdit returned status %d", resp.StatusCode)
+	}
+
+	body, err := client.ReadResponseBody(resp)
+	if err != nil {
+		return nil, fmt.Errorf("error reading MembersEdit form: %w", err)
+	}
+
+	html := string(body)
+
+	// Parse ASP.NET form
+	form, err := ParseMembersForm(html)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing ASP.NET form: %w", err)
+	}
+
+	// Set member ID if provided
+	form.MemberID = memberID
+
+	s.logger.Info("GetMembersForm complete: MembersEdit form loaded",
+		"memberID", memberID,
+		"viewStateLen", len(form.ViewState),
+		"dropdownCount", len(form.DropdownOptions),
+		"fieldCount", len(form.Fields))
+
+	return form, nil
+}
+
+// SubmitMember submits member data to the MembersEdit form.
+// POST https://register.tax.gov.ir/Pages/Preaction/MembersEdit or MembersEdit/{memberID}
+func (s *Service) SubmitMember(sess *session.Session, form *MembersFormData, req *MemberSubmitRequest) (*MemberSubmitResponse, error) {
+	membersURL := s.cfg.Services.RegisterTax.MembersEditURL
+	if form.MemberID != "" {
+		membersURL = strings.TrimSuffix(membersURL, "/") + "/" + form.MemberID
+	}
+
+	// Build form payload
+	payload := BuildMemberFormPayload(form, req)
+
+	httpReq, err := http.NewRequest("POST", membersURL, strings.NewReader(payload.Encode()))
+	if err != nil {
+		return nil, fmt.Errorf("error creating member submit request: %w", err)
+	}
+
+	s.client.SetFormSubmitHeaders(httpReq, membersURL)
+	s.client.AddCookies(httpReq, sess.GetCookies())
+
+	s.logger.Info("SubmitMember: Submitting member form",
+		"url", membersURL,
+		"memberID", form.MemberID,
+		"nationalID", req.NationalID)
+
+	resp, err := s.client.Do(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("error submitting member form: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Save cookies
+	if cookies := resp.Cookies(); len(cookies) > 0 {
+		sess.MergeCookies(cookies)
+	}
+
+	body, err := client.ReadResponseBody(resp)
+	if err != nil {
+		return nil, fmt.Errorf("error reading member response: %w", err)
+	}
+
+	s.logger.Debug("SubmitMember response", "status", resp.StatusCode, "bodyLen", len(body))
+
+	responseHTML := string(body)
+	result := &MemberSubmitResponse{}
+
+	// Check for success/error indicators
+	if resp.StatusCode == 200 {
+		// Check for error messages in response
+		if strings.Contains(responseHTML, "خطا") && !strings.Contains(responseHTML, "بدون خطا") {
+			s.logger.Warn("Member submission may have errors", "preview", truncateString(responseHTML, 500))
+			result.Success = false
+			result.Message = "Form submission returned errors"
+			return result, fmt.Errorf("member form submission returned errors")
+		}
+
+		// Try to extract member ID from response if new member
+		if form.MemberID == "" {
+			// Look for GUID in response
+			if match := uuidPattern.FindString(responseHTML); match != "" {
+				result.MemberID = match
+			}
+		} else {
+			result.MemberID = form.MemberID
+		}
+
+		result.Success = true
+		result.Message = "Member submitted successfully"
+		s.logger.Info("SubmitMember complete: Member submitted", "memberID", result.MemberID)
+		return result, nil
+	}
+
+	if resp.StatusCode >= 300 && resp.StatusCode < 400 {
+		location := resp.Header.Get("Location")
+		s.logger.Info("SubmitMember: Redirected after submission", "location", location)
+		result.Success = true
+		result.Message = "Member submission redirected"
+		return result, nil
+	}
+
+	result.Success = false
+	result.Message = fmt.Sprintf("member form submission returned status %d", resp.StatusCode)
+	return result, fmt.Errorf("%s", result.Message)
+}
+
 // truncateString truncates a string to maxLen characters.
 func truncateString(s string, maxLen int) string {
 	if len(s) <= maxLen {
 		return s
 	}
 	return s[:maxLen] + "..."
+}
+
+// ==================== Member List/Delete Methods ====================
+
+// ListMembers fetches all members for a registration from the MembersEdit page.
+// It parses the HTML table to extract member information.
+func (s *Service) ListMembers(sess *session.Session, registrationID string) ([]MemberInfo, error) {
+	s.logger.Info("Fetching members list", "registrationId", registrationID)
+
+	// Navigate to the HomePage first to get the members table
+	homePageURL := s.cfg.Services.RegisterTax.HomePageURL
+	if homePageURL == "" {
+		homePageURL = "https://register.tax.gov.ir/Pages/Preaction/HomePage"
+	}
+
+	req, err := http.NewRequest(http.MethodGet, homePageURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	// Set headers
+	s.client.SetCommonHeaders(req)
+
+	// Add session cookies
+	for _, cookie := range sess.GetCookies() {
+		req.AddCookie(cookie)
+	}
+
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch home page: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response: %w", err)
+	}
+
+	// Parse members from the HTML response
+	members := parseMembersTable(string(body))
+
+	s.logger.Info("Members list fetched", "count", len(members))
+	return members, nil
+}
+
+// parseMembersTable extracts member information from the HomePage HTML table.
+func parseMembersTable(html string) []MemberInfo {
+	var members []MemberInfo
+
+	// Look for member rows in the table
+	// Pattern: <tr> with member data
+	memberRowRegex := regexp.MustCompile(`(?s)<tr[^>]*>.*?<td[^>]*>([^<]*)</td>.*?<td[^>]*>([^<]*)</td>.*?<td[^>]*>([^<]*)</td>.*?<td[^>]*>([^<]*)</td>.*?<td[^>]*>([^<]*)</td>.*?</tr>`)
+	matches := memberRowRegex.FindAllStringSubmatch(html, -1)
+
+	for i, match := range matches {
+		if len(match) >= 5 {
+			// Extract share percentage as int
+			shareStr := strings.TrimSpace(match[4])
+			shareStr = strings.ReplaceAll(shareStr, "%", "")
+			shareStr = strings.ReplaceAll(shareStr, "٪", "")
+			share := 0
+			fmt.Sscanf(shareStr, "%d", &share)
+
+			member := MemberInfo{
+				ID:           fmt.Sprintf("member-%d", i),
+				PersonType:   strings.TrimSpace(match[1]),
+				Name:         strings.TrimSpace(match[2]),
+				NationalID:   strings.TrimSpace(match[3]),
+				SharePercent: share,
+				Position:     strings.TrimSpace(match[5]),
+				Status:       "فعال",
+			}
+			members = append(members, member)
+		}
+	}
+
+	return members
+}
+
+// DeleteMember removes a member from a registration.
+// It navigates to the MembersEdit page and triggers the delete postback.
+func (s *Service) DeleteMember(sess *session.Session, registrationID, memberID string) error {
+	s.logger.Info("Deleting member", "registrationId", registrationID, "memberId", memberID)
+
+	// Note: This is a placeholder implementation.
+	// The actual implementation would need to:
+	// 1. Navigate to the member's edit page
+	// 2. Extract ASP.NET state
+	// 3. Submit a delete postback
+
+	// For now, return a not implemented error
+	return fmt.Errorf("delete member not fully implemented yet - memberID: %s", memberID)
+}
+
+// ==================== Bank Account (SHEBA) List/Delete Methods ====================
+
+// GetShebaList fetches all bank accounts for a registration from the AddShebaNumber page.
+func (s *Service) GetShebaList(sess *session.Session, registrationID string) ([]BankAccountInfo, error) {
+	s.logger.Info("Fetching bank accounts list", "registrationId", registrationID)
+
+	// Navigate to the HomePage to get the bank accounts table
+	homePageURL := s.cfg.Services.RegisterTax.HomePageURL
+	if homePageURL == "" {
+		homePageURL = "https://register.tax.gov.ir/Pages/Preaction/HomePage"
+	}
+
+	req, err := http.NewRequest(http.MethodGet, homePageURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	// Set headers
+	s.client.SetCommonHeaders(req)
+
+	// Add session cookies
+	for _, cookie := range sess.GetCookies() {
+		req.AddCookie(cookie)
+	}
+
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch home page: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response: %w", err)
+	}
+
+	// Parse bank accounts from the HTML response
+	accounts := parseBankAccountsTable(string(body))
+
+	s.logger.Info("Bank accounts list fetched", "count", len(accounts))
+	return accounts, nil
+}
+
+// parseBankAccountsTable extracts bank account information from the HomePage HTML table.
+func parseBankAccountsTable(html string) []BankAccountInfo {
+	var accounts []BankAccountInfo
+
+	// Look for SHEBA rows in the bank accounts table
+	// Pattern: IR + 24 digits for IBAN
+	shebaRegex := regexp.MustCompile(`(?s)<tr[^>]*>.*?<td[^>]*>(IR\d{24}|\d{24})</td>.*?<td[^>]*>([^<]*)</td>.*?</tr>`)
+	matches := shebaRegex.FindAllStringSubmatch(html, -1)
+
+	for i, match := range matches {
+		if len(match) >= 3 {
+			iban := strings.TrimSpace(match[1])
+			// Ensure IR prefix
+			if !strings.HasPrefix(iban, "IR") {
+				iban = "IR" + iban
+			}
+
+			account := BankAccountInfo{
+				ID:        fmt.Sprintf("sheba-%d", i),
+				IBAN:      iban,
+				StartDate: strings.TrimSpace(match[2]),
+				Status:    "فعال",
+			}
+			accounts = append(accounts, account)
+		}
+	}
+
+	return accounts
+}
+
+// DeleteSheba removes a bank account from a registration.
+// It navigates to the AddShebaNumber page and triggers the delete postback.
+func (s *Service) DeleteSheba(sess *session.Session, registrationID, shebaID string) error {
+	s.logger.Info("Deleting bank account", "registrationId", registrationID, "shebaId", shebaID)
+
+	// Note: This is a placeholder implementation.
+	// The actual implementation would need to:
+	// 1. Navigate to the AddShebaNumber page
+	// 2. Find the delete link for the specific SHEBA
+	// 3. Extract ASP.NET state
+	// 4. Submit a delete postback
+
+	// For now, return a not implemented error
+	return fmt.Errorf("delete SHEBA not fully implemented yet - shebaID: %s", shebaID)
 }
