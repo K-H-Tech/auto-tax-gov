@@ -283,6 +283,59 @@ func ExtractGUIDFromHTML(html string) string {
 	return ""
 }
 
+// ExtractHiddenField extracts a hidden field value from HTML by field name.
+func ExtractHiddenField(html, fieldName string) string {
+	// Pattern: <input type="hidden" name="fieldName" value="..." />
+	pattern := regexp.MustCompile(fmt.Sprintf(`<input[^>]*name="%s"[^>]*value="([^"]*)"`, regexp.QuoteMeta(fieldName)))
+	if match := pattern.FindStringSubmatch(html); len(match) > 1 {
+		return match[1]
+	}
+
+	// Alternative pattern: value before name
+	altPattern := regexp.MustCompile(fmt.Sprintf(`<input[^>]*value="([^"]*)"[^>]*name="%s"`, regexp.QuoteMeta(fieldName)))
+	if match := altPattern.FindStringSubmatch(html); len(match) > 1 {
+		return match[1]
+	}
+
+	return ""
+}
+
+// ParseDropdownOptions extracts options from a specific dropdown by partial ID match.
+func ParseDropdownOptions(html, partialID string) []DropdownOption {
+	var options []DropdownOption
+
+	// Find select elements containing the partial ID
+	selectRegex := regexp.MustCompile(fmt.Sprintf(`(?is)<select[^>]*id="[^"]*%s[^"]*"[^>]*>(.*?)</select>`, regexp.QuoteMeta(partialID)))
+	matches := selectRegex.FindAllStringSubmatch(html, -1)
+
+	for _, match := range matches {
+		if len(match) >= 2 {
+			selectContent := match[1]
+
+			optMatches := optionPattern.FindAllStringSubmatch(selectContent, -1)
+			for _, optMatch := range optMatches {
+				if len(optMatch) >= 3 {
+					value := strings.TrimSpace(optMatch[1])
+					label := strings.TrimSpace(optMatch[2])
+
+					// Skip empty/default options
+					if value == "" || value == "-1" {
+						continue
+					}
+
+					options = append(options, DropdownOption{
+						Value: value,
+						Label: label,
+					})
+				}
+			}
+			break // Use first matching select
+		}
+	}
+
+	return options
+}
+
 // ParseMembersForm extracts all ASP.NET form data from MembersEdit page HTML.
 func ParseMembersForm(html string) (*MembersFormData, error) {
 	form := &MembersFormData{

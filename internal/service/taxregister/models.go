@@ -209,3 +209,46 @@ type BankAccountInfo struct {
 	StartDate string `json:"startDate"` // تاریخ شروع استفاده
 	Status    string `json:"status"`    // وضعیت
 }
+
+// INTASearchResult represents a search result from the INTA code search.
+type INTASearchResult struct {
+	Code       string `json:"code"`       // e.g., "3190130"
+	FullPath   string `json:"fullPath"`   // e.g., "خدمات/فعالیت های سینمایی.../جلوه های ویژه"
+	EntityType string `json:"entityType"` // e.g., "حقیقی/حقوقی"
+}
+
+// INTALevelOption represents an option in a cascade dropdown level.
+type INTALevelOption struct {
+	Level int    `json:"level"`
+	Value string `json:"value"`
+	Label string `json:"label"`
+}
+
+// INTAActivity represents a complete INTA activity with cascade level selections.
+type INTAActivity struct {
+	Levels      []INTALevelOption `json:"levels"`      // Selected options at each level
+	Code        string            `json:"code"`        // Final INTA code
+	Description string            `json:"description"` // شرح فعالیت
+	Percent     int               `json:"percent"`     // درصد فعالیت
+}
+
+// INTAFormData contains the ASP.NET form state from ActivityINTACode page.
+type INTAFormData struct {
+	ViewState          string `json:"viewState"`
+	ViewStateGenerator string `json:"viewStateGenerator"`
+	EventValidation    string `json:"eventValidation"`
+
+	// Available dropdown options at each level
+	Level1Options []DropdownOption `json:"level1Options,omitempty"`
+	Level2Options []DropdownOption `json:"level2Options,omitempty"`
+	Level3Options []DropdownOption `json:"level3Options,omitempty"`
+	Level4Options []DropdownOption `json:"level4Options,omitempty"`
+
+	// Current activities list
+	Activities []INTAActivity `json:"activities,omitempty"`
+}
+
+// INTASubmitRequest contains data for submitting INTA activities.
+type INTASubmitRequest struct {
+	Activities []INTAActivity `json:"activities"`
+}

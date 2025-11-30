@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/K-H-Tech/auto-tax-gov/internal/config"
 	"github.com/K-H-Tech/auto-tax-gov/internal/helpers"
@@ -1017,6 +1018,217 @@ func (h *Handler) HandleGetINTACodeOptions(w http.ResponseWriter, r *http.Reques
 	json.NewEncoder(w).Encode(models.APIResponse{
 		Success: true,
 		Data:    result,
+	})
+}
+
+// HandleSearchINTACodes searches for INTA codes by keyword.
+// GET /api/register/inta-code/search?q={keyword}
+func (h *Handler) HandleSearchINTACodes(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	if !h.session.IsAuthenticated() {
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   "نشست احراز هویت نشده. لطفاً ابتدا وارد شوید.",
+		})
+		return
+	}
+
+	keyword := r.URL.Query().Get("q")
+	if len(keyword) < 3 {
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   "کلمه کلیدی باید حداقل ۳ حرف باشد",
+		})
+		return
+	}
+
+	h.logger.Info("Searching INTA codes", "keyword", keyword)
+
+	results, err := h.taxregister.SearchINTACodes(h.session, keyword)
+	if err != nil {
+		h.logger.Error("SearchINTACodes failed", "error", err)
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   err.Error(),
+		})
+		return
+	}
+
+	json.NewEncoder(w).Encode(models.APIResponse{
+		Success: true,
+		Data: map[string]interface{}{
+			"results": results,
+		},
+	})
+}
+
+// HandleGetINTACodeForm fetches the INTA code form with form state and options.
+// GET /api/register/inta-code/form
+func (h *Handler) HandleGetINTACodeForm(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	if !h.session.IsAuthenticated() {
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   "نشست احراز هویت نشده. لطفاً ابتدا وارد شوید.",
+		})
+		return
+	}
+
+	h.logger.Info("Fetching INTA code form")
+
+	form, err := h.taxregister.GetINTACodeForm(h.session)
+	if err != nil {
+		h.logger.Error("GetINTACodeForm failed", "error", err)
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   err.Error(),
+		})
+		return
+	}
+
+	json.NewEncoder(w).Encode(models.APIResponse{
+		Success: true,
+		Data: map[string]interface{}{
+			"level1Options": form.Level1Options,
+			"activities":    form.Activities,
+			"hasViewState":  form.ViewState != "",
+		},
+	})
+}
+
+// HandleGetINTACascadeOptions fetches cascade dropdown options for a specific level.
+// GET /api/register/inta-code/cascade?level={level}&parents={parent1,parent2,...}
+func (h *Handler) HandleGetINTACascadeOptions(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	if !h.session.IsAuthenticated() {
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   "نشست احراز هویت نشده. لطفاً ابتدا وارد شوید.",
+		})
+		return
+	}
+
+	levelStr := r.URL.Query().Get("level")
+	parentsStr := r.URL.Query().Get("parents")
+
+	level := 1
+	fmt.Sscanf(levelStr, "%d", &level)
+
+	var parents []string
+	if parentsStr != "" {
+		// Parse comma-separated parent values
+		for _, p := range strings.Split(parentsStr, ",") {
+			if p = strings.TrimSpace(p); p != "" {
+				parents = append(parents, p)
+			}
+		}
+	}
+
+	h.logger.Info("Fetching INTA cascade options", "level", level, "parents", parents)
+
+	options, err := h.taxregister.GetINTACodeOptions(h.session, level, parents)
+	if err != nil {
+		h.logger.Error("GetINTACodeOptions failed", "error", err)
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   err.Error(),
+		})
+		return
+	}
+
+	json.NewEncoder(w).Encode(models.APIResponse{
+		Success: true,
+		Data: map[string]interface{}{
+			"options": options,
+			"level":   level,
+		},
+	})
+}
+
+// HandleSubmitINTACodes submits INTA code activities using taxregister service.
+// POST /api/register/inta-code/activities
+func (h *Handler) HandleSubmitINTACodes(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	var req struct {
+		Activities []taxregister.INTAActivity `json:"activities"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   "درخواست نامعتبر است",
+		})
+		return
+	}
+
+	// Validate activities
+	if len(req.Activities) == 0 {
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   "حداقل یک فعالیت باید وارد شود",
+		})
+		return
+	}
+
+	// Validate total percentage = 100%
+	totalPercent := 0
+	for _, activity := range req.Activities {
+		totalPercent += activity.Percent
+	}
+	if totalPercent != 100 {
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   "مجموع درصد فعالیت‌ها باید ۱۰۰٪ باشد",
+		})
+		return
+	}
+
+	h.logger.Info("Submitting INTA code activities", "activityCount", len(req.Activities))
+
+	if !h.session.IsAuthenticated() {
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   "نشست احراز هویت نشده. لطفاً ابتدا وارد شوید.",
+		})
+		return
+	}
+
+	err := h.taxregister.SubmitINTACodes(h.session, req.Activities)
+	if err != nil {
+		h.logger.Error("SubmitINTACodes failed", "error", err)
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   err.Error(),
+		})
+		return
+	}
+
+	json.NewEncoder(w).Encode(models.APIResponse{
+		Success: true,
+		Message: "فعالیت‌ها با موفقیت ثبت شدند",
 	})
 }
 

@@ -974,3 +974,547 @@ func (s *Service) DeleteSheba(sess *session.Session, registrationID, shebaID str
 	// For now, return a not implemented error
 	return fmt.Errorf("delete SHEBA not fully implemented yet - shebaID: %s", shebaID)
 }
+
+// ==================== INTA Code Methods ====================
+
+// GetINTACodeForm fetches the ActivityINTACode form and extracts ASP.NET state.
+// GET https://register.tax.gov.ir/Pages/Preaction/Edit/ActivityINTACode/
+func (s *Service) GetINTACodeForm(sess *session.Session) (*INTAFormData, error) {
+	intaURL := s.cfg.Services.RegisterTax.ActivityINTACodeURL
+	if intaURL == "" {
+		intaURL = "https://register.tax.gov.ir/Pages/Preaction/Edit/ActivityINTACode/"
+	}
+
+	httpReq, err := http.NewRequest("GET", intaURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("error creating INTACode request: %w", err)
+	}
+
+	s.client.SetNavigationHeaders(httpReq, s.cfg.Services.RegisterTax.HomePageURL)
+	s.client.AddCookies(httpReq, sess.GetCookies())
+
+	s.logger.Info("GetINTACodeForm: Fetching INTA code form", "url", intaURL)
+
+	resp, err := s.client.Do(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching INTACode form: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Save cookies
+	if cookies := resp.Cookies(); len(cookies) > 0 {
+		sess.MergeCookies(cookies)
+	}
+
+	if resp.StatusCode == 302 {
+		location := resp.Header.Get("Location")
+		if strings.Contains(location, "/Login") {
+			return nil, fmt.Errorf("not authenticated - redirected to login page")
+		}
+		return nil, fmt.Errorf("INTACode redirected to %s", location)
+	}
+
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("INTACode returned status %d", resp.StatusCode)
+	}
+
+	body, err := client.ReadResponseBody(resp)
+	if err != nil {
+		return nil, fmt.Errorf("error reading INTACode form: %w", err)
+	}
+
+	html := string(body)
+
+	// Parse ASP.NET form state
+	form := &INTAFormData{}
+	form.ViewState = ExtractHiddenField(html, "__VIEWSTATE")
+	form.ViewStateGenerator = ExtractHiddenField(html, "__VIEWSTATEGENERATOR")
+	form.EventValidation = ExtractHiddenField(html, "__EVENTVALIDATION")
+
+	// Parse Level 1 dropdown options (always available)
+	form.Level1Options = ParseDropdownOptions(html, "DDLActivityINTACodeCategory")
+	if len(form.Level1Options) == 0 {
+		// Fallback: hardcoded Level 1 options based on portal investigation
+		form.Level1Options = []DropdownOption{
+			{Value: "1", Label: "[1] تولید"},
+			{Value: "2", Label: "[2] بازرگانی"},
+			{Value: "3", Label: "[3] خدمات"},
+		}
+	}
+
+	// Parse existing activities from the page
+	form.Activities = parseExistingActivities(html)
+
+	s.logger.Info("GetINTACodeForm complete",
+		"viewStateLen", len(form.ViewState),
+		"level1Options", len(form.Level1Options),
+		"existingActivities", len(form.Activities))
+
+	return form, nil
+}
+
+// GetINTACodeOptions fetches dropdown options for a specific cascade level.
+// level: 1-4 (depth in cascade)
+// parentValue: value of parent dropdown (empty for level 1)
+// parentLevels: all parent level values for deep cascade
+func (s *Service) GetINTACodeOptions(sess *session.Session, level int, parentLevels []string) ([]DropdownOption, error) {
+	s.logger.Info("GetINTACodeOptions: Fetching options",
+		"level", level,
+		"parentLevels", parentLevels)
+
+	// Level 1 is static
+	if level == 1 {
+		return []DropdownOption{
+			{Value: "1", Label: "[1] تولید"},
+			{Value: "2", Label: "[2] بازرگانی"},
+			{Value: "3", Label: "[3] خدمات"},
+		}, nil
+	}
+
+	// For levels 2+, we need to do AJAX postback to get options
+	// First, get the current form state
+	form, err := s.GetINTACodeForm(sess)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get INTA form: %w", err)
+	}
+
+	// Build the event target based on level
+	eventTargets := map[int]string{
+		2: "ctl00$CPC$DDLActivityINTACodeCategory",
+		3: "ctl00$CPC$DDLActivityINTACodeSubCategory1",
+		4: "ctl00$CPC$DDLActivityINTACodeSubCategory2",
+	}
+
+	eventTarget, ok := eventTargets[level]
+	if !ok {
+		return nil, fmt.Errorf("invalid level: %d", level)
+	}
+
+	// Perform cascade selection up to requested level
+	for i := 1; i < level && i <= len(parentLevels); i++ {
+		fieldValues := make(map[string]string)
+
+		// Set all parent values
+		for j := 0; j < i && j < len(parentLevels); j++ {
+			switch j {
+			case 0:
+				fieldValues["ctl00$CPC$DDLActivityINTACodeCategory"] = parentLevels[j]
+			case 1:
+				fieldValues["ctl00$CPC$DDLActivityINTACodeSubCategory1"] = parentLevels[j]
+			case 2:
+				fieldValues["ctl00$CPC$DDLActivityINTACodeSubCategory2"] = parentLevels[j]
+			}
+		}
+
+		// Make AJAX postback to trigger cascade
+		options, err := s.doINTACascadePostback(sess, form, eventTarget, fieldValues, level)
+		if err != nil {
+			return nil, fmt.Errorf("cascade postback failed at level %d: %w", i+1, err)
+		}
+
+		if i == level-1 {
+			return options, nil
+		}
+	}
+
+	return nil, fmt.Errorf("failed to get options for level %d", level)
+}
+
+// doINTACascadePostback performs an AJAX postback to get cascade dropdown options.
+func (s *Service) doINTACascadePostback(sess *session.Session, form *INTAFormData, eventTarget string, fieldValues map[string]string, targetLevel int) ([]DropdownOption, error) {
+	intaURL := s.cfg.Services.RegisterTax.ActivityINTACodeURL
+	if intaURL == "" {
+		intaURL = "https://register.tax.gov.ir/Pages/Preaction/Edit/ActivityINTACode/"
+	}
+
+	// Build AJAX payload
+	payload := url.Values{}
+	payload.Set("ctl00$SMaster", "ctl00$CPC$UPActivityINTACode|"+eventTarget)
+	payload.Set("__EVENTTARGET", eventTarget)
+	payload.Set("__EVENTARGUMENT", "")
+	payload.Set("__VIEWSTATE", form.ViewState)
+	payload.Set("__VIEWSTATEGENERATOR", form.ViewStateGenerator)
+	payload.Set("__EVENTVALIDATION", form.EventValidation)
+	payload.Set("__ASYNCPOST", "true")
+
+	// Add field values
+	for k, v := range fieldValues {
+		payload.Set(k, v)
+	}
+
+	httpReq, err := http.NewRequest("POST", intaURL, strings.NewReader(payload.Encode()))
+	if err != nil {
+		return nil, fmt.Errorf("error creating AJAX request: %w", err)
+	}
+
+	s.client.SetAjaxHeaders(httpReq, intaURL)
+	s.client.AddCookies(httpReq, sess.GetCookies())
+
+	resp, err := s.client.Do(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("error performing AJAX request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Save cookies
+	if cookies := resp.Cookies(); len(cookies) > 0 {
+		sess.MergeCookies(cookies)
+	}
+
+	body, err := client.ReadResponseBody(resp)
+	if err != nil {
+		return nil, fmt.Errorf("error reading AJAX response: %w", err)
+	}
+
+	// Parse the AJAX response to extract dropdown options
+	options := parseAjaxDropdownOptions(string(body), targetLevel)
+
+	s.logger.Debug("INTA cascade postback complete",
+		"targetLevel", targetLevel,
+		"optionsCount", len(options))
+
+	return options, nil
+}
+
+// parseAjaxDropdownOptions extracts dropdown options from AJAX response.
+func parseAjaxDropdownOptions(ajaxResponse string, targetLevel int) []DropdownOption {
+	var options []DropdownOption
+
+	// AJAX responses contain UpdatePanel content with dropdown HTML
+	// Look for <option> tags in the response
+	optionRegex := regexp.MustCompile(`<option[^>]*value="([^"]*)"[^>]*>([^<]*)</option>`)
+	matches := optionRegex.FindAllStringSubmatch(ajaxResponse, -1)
+
+	for _, match := range matches {
+		if len(match) >= 3 {
+			value := strings.TrimSpace(match[1])
+			label := strings.TrimSpace(match[2])
+
+			// Skip empty/default options
+			if value == "" || value == "-1" || label == "انتخاب شود..." || label == "انتخاب کنید" {
+				continue
+			}
+
+			options = append(options, DropdownOption{
+				Value: value,
+				Label: label,
+			})
+		}
+	}
+
+	return options
+}
+
+// parseExistingActivities extracts existing INTA activities from the form HTML.
+func parseExistingActivities(html string) []INTAActivity {
+	var activities []INTAActivity
+
+	// Look for activity rows in the table
+	// The pattern depends on the actual HTML structure
+	activityRowRegex := regexp.MustCompile(`(?s)<tr[^>]*data-code="([^"]*)"[^>]*>.*?<td[^>]*>([^<]*)</td>.*?<td[^>]*>(\d+)%?</td>.*?</tr>`)
+	matches := activityRowRegex.FindAllStringSubmatch(html, -1)
+
+	for _, match := range matches {
+		if len(match) >= 4 {
+			percent := 0
+			fmt.Sscanf(match[3], "%d", &percent)
+
+			activity := INTAActivity{
+				Code:        match[1],
+				Description: strings.TrimSpace(match[2]),
+				Percent:     percent,
+			}
+			activities = append(activities, activity)
+		}
+	}
+
+	return activities
+}
+
+// SearchINTACodes searches INTA codes by keyword.
+func (s *Service) SearchINTACodes(sess *session.Session, keyword string) ([]INTASearchResult, error) {
+	s.logger.Info("SearchINTACodes: Searching INTA codes", "keyword", keyword)
+
+	if len(keyword) < 3 {
+		return nil, fmt.Errorf("keyword must be at least 3 characters")
+	}
+
+	// Get the form state first
+	form, err := s.GetINTACodeForm(sess)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get INTA form: %w", err)
+	}
+
+	intaURL := s.cfg.Services.RegisterTax.ActivityINTACodeURL
+	if intaURL == "" {
+		intaURL = "https://register.tax.gov.ir/Pages/Preaction/Edit/ActivityINTACode/"
+	}
+
+	// Build search payload
+	payload := url.Values{}
+	payload.Set("ctl00$SMaster", "ctl00$CPC$UPActivityINTACode|ctl00$CPC$ButtonActivityINTACodeSearch")
+	payload.Set("__EVENTTARGET", "")
+	payload.Set("__EVENTARGUMENT", "")
+	payload.Set("__VIEWSTATE", form.ViewState)
+	payload.Set("__VIEWSTATEGENERATOR", form.ViewStateGenerator)
+	payload.Set("__EVENTVALIDATION", form.EventValidation)
+	payload.Set("__ASYNCPOST", "true")
+	payload.Set("ctl00$CPC$TextboxActivityINTACode", keyword)
+	payload.Set("ctl00$CPC$ButtonActivityINTACodeSearch", "جستجو")
+
+	httpReq, err := http.NewRequest("POST", intaURL, strings.NewReader(payload.Encode()))
+	if err != nil {
+		return nil, fmt.Errorf("error creating search request: %w", err)
+	}
+
+	s.client.SetAjaxHeaders(httpReq, intaURL)
+	s.client.AddCookies(httpReq, sess.GetCookies())
+
+	resp, err := s.client.Do(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("error performing search request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Save cookies
+	if cookies := resp.Cookies(); len(cookies) > 0 {
+		sess.MergeCookies(cookies)
+	}
+
+	body, err := client.ReadResponseBody(resp)
+	if err != nil {
+		return nil, fmt.Errorf("error reading search response: %w", err)
+	}
+
+	bodyStr := string(body)
+
+	// Debug: log response details
+	s.logger.Debug("SearchINTACodes: AJAX response received",
+		"responseLength", len(bodyStr),
+		"hasUpdatePanel", strings.Contains(bodyStr, "|updatePanel|"),
+		"hasLB", strings.Contains(bodyStr, "LB"),
+		"hasTextboxActivityINTACode", strings.Contains(bodyStr, "TextboxActivityINTACode"),
+		"first500chars", truncateString(bodyStr, 500))
+
+	// Parse search results from AJAX response
+	results := parseINTASearchResults(bodyStr)
+
+	s.logger.Info("SearchINTACodes complete",
+		"keyword", keyword,
+		"resultsCount", len(results))
+
+	return results, nil
+}
+
+// parseINTASearchResults extracts search results from the AJAX response.
+// ASP.NET AJAX partial postback responses use pipe-delimited format:
+// length|type|id|content|length|type|id|content|...
+func parseINTASearchResults(ajaxResponse string) []INTASearchResult {
+	var results []INTASearchResult
+
+	// First, extract updatePanel content from AJAX response
+	// The response format is: length|updatePanel|panelID|<html content>|...
+	htmlContent := extractUpdatePanelContent(ajaxResponse)
+
+	// If no updatePanel found, use the raw response (might be regular HTML)
+	if htmlContent == "" {
+		htmlContent = ajaxResponse
+	}
+
+	// Look for search result items in the response
+	// Pattern: links with javascript:__doPostBack('ctl00$CPC$TextboxActivityINTACode$LB{code}','')
+	// Example: <a href="javascript:__doPostBack('ctl00$CPC$TextboxActivityINTACode$LB3190130','')">• [3190130] [حقیقی/حقوقی] خدمات/...</a>
+	resultRegex := regexp.MustCompile(`(?s)TextboxActivityINTACode\$LB(\d{7})[^>]*>([^<]+)</a>`)
+	matches := resultRegex.FindAllStringSubmatch(htmlContent, -1)
+
+	for _, match := range matches {
+		if len(match) >= 3 {
+			// Clean up the description - remove bullet point and code prefix
+			description := strings.TrimSpace(match[2])
+			// Remove leading bullet and code: "• [3190130] [حقیقی/حقوقی] خدمات/..."
+			description = strings.TrimPrefix(description, "•")
+			description = strings.TrimSpace(description)
+
+			result := INTASearchResult{
+				Code:     match[1],
+				FullPath: description,
+			}
+			results = append(results, result)
+		}
+	}
+
+	// Also try alternative pattern with just LB code
+	if len(results) == 0 {
+		altRegex := regexp.MustCompile(`(?s)LB(\d{7})[^>]*>([^<]+)</a>`)
+		altMatches := altRegex.FindAllStringSubmatch(htmlContent, -1)
+
+		for _, match := range altMatches {
+			if len(match) >= 3 {
+				description := strings.TrimSpace(match[2])
+				description = strings.TrimPrefix(description, "•")
+				description = strings.TrimSpace(description)
+
+				result := INTASearchResult{
+					Code:     match[1],
+					FullPath: description,
+				}
+				results = append(results, result)
+			}
+		}
+	}
+
+	// Last resort: look for [code] pattern in text
+	if len(results) == 0 {
+		lastRegex := regexp.MustCompile(`\[(\d{7})\]\s*(\[[^\]]*\]\s*[^\n<]+)`)
+		lastMatches := lastRegex.FindAllStringSubmatch(htmlContent, -1)
+
+		for _, match := range lastMatches {
+			if len(match) >= 3 {
+				result := INTASearchResult{
+					Code:     match[1],
+					FullPath: strings.TrimSpace(match[2]),
+				}
+				results = append(results, result)
+			}
+		}
+	}
+
+	return results
+}
+
+// extractUpdatePanelContent extracts HTML content from ASP.NET AJAX partial postback response.
+// Format: length|type|id|content|length|type|id|content|...
+// We look for updatePanel sections that contain our search results.
+func extractUpdatePanelContent(response string) string {
+	// Check if this looks like an AJAX response (starts with number followed by |)
+	if len(response) == 0 || !strings.Contains(response, "|updatePanel|") {
+		return ""
+	}
+
+	var allContent strings.Builder
+	parts := strings.Split(response, "|")
+
+	i := 0
+	for i < len(parts)-3 {
+		// Try to parse length
+		_, err := fmt.Sscanf(parts[i], "%d", new(int))
+		if err != nil {
+			i++
+			continue
+		}
+
+		// Check if this is an updatePanel
+		if parts[i+1] == "updatePanel" {
+			// parts[i+2] is the panel ID
+			// parts[i+3] is the content
+			if i+3 < len(parts) {
+				content := parts[i+3]
+				// The content might contain the search results
+				if strings.Contains(content, "TextboxActivityINTACode") ||
+					strings.Contains(content, "LB") {
+					allContent.WriteString(content)
+					allContent.WriteString("\n")
+				}
+			}
+			i += 4
+		} else {
+			i++
+		}
+	}
+
+	return allContent.String()
+}
+
+// SubmitINTACodes submits INTA activities to the portal.
+func (s *Service) SubmitINTACodes(sess *session.Session, activities []INTAActivity) error {
+	s.logger.Info("SubmitINTACodes: Submitting activities", "count", len(activities))
+
+	if len(activities) == 0 {
+		return fmt.Errorf("at least one activity is required")
+	}
+
+	// Validate total percentage
+	totalPercent := 0
+	for _, a := range activities {
+		totalPercent += a.Percent
+	}
+	if totalPercent != 100 {
+		return fmt.Errorf("total percentage must be 100, got %d", totalPercent)
+	}
+
+	// Get the form state
+	form, err := s.GetINTACodeForm(sess)
+	if err != nil {
+		return fmt.Errorf("failed to get INTA form: %w", err)
+	}
+
+	intaURL := s.cfg.Services.RegisterTax.ActivityINTACodeURL
+	if intaURL == "" {
+		intaURL = "https://register.tax.gov.ir/Pages/Preaction/Edit/ActivityINTACode/"
+	}
+
+	// Submit each activity one by one
+	for i, activity := range activities {
+		s.logger.Debug("Submitting activity",
+			"index", i+1,
+			"code", activity.Code,
+			"percent", activity.Percent)
+
+		// Build payload for adding an activity
+		payload := url.Values{}
+		payload.Set("__VIEWSTATE", form.ViewState)
+		payload.Set("__VIEWSTATEGENERATOR", form.ViewStateGenerator)
+		payload.Set("__EVENTVALIDATION", form.EventValidation)
+
+		// Set the INTA code via postback (simulating click on search result)
+		payload.Set("__EVENTTARGET", "ctl00$CPC$TextboxActivityINTACode$LB"+activity.Code)
+		payload.Set("__EVENTARGUMENT", "")
+
+		// Set description and percentage
+		payload.Set("ctl00$CPC$TextBoxActivityDescription", activity.Description)
+		payload.Set("ctl00$CPC$TextBoxActivityPercent", fmt.Sprintf("%d", activity.Percent))
+
+		// Add button
+		payload.Set("ctl00$CPC$ButtonActivityINTACodeAdd", "افزودن")
+
+		httpReq, err := http.NewRequest("POST", intaURL, strings.NewReader(payload.Encode()))
+		if err != nil {
+			return fmt.Errorf("error creating submit request for activity %d: %w", i+1, err)
+		}
+
+		s.client.SetFormSubmitHeaders(httpReq, intaURL)
+		s.client.AddCookies(httpReq, sess.GetCookies())
+
+		resp, err := s.client.Do(httpReq)
+		if err != nil {
+			return fmt.Errorf("error submitting activity %d: %w", i+1, err)
+		}
+
+		// Save cookies
+		if cookies := resp.Cookies(); len(cookies) > 0 {
+			sess.MergeCookies(cookies)
+		}
+
+		body, err := client.ReadResponseBody(resp)
+		resp.Body.Close()
+
+		if err != nil {
+			return fmt.Errorf("error reading response for activity %d: %w", i+1, err)
+		}
+
+		// Check for errors in response
+		responseHTML := string(body)
+		if strings.Contains(responseHTML, "خطا") && !strings.Contains(responseHTML, "بدون خطا") {
+			return fmt.Errorf("error submitting activity %d: form returned errors", i+1)
+		}
+
+		// Update form state for next activity
+		form.ViewState = ExtractHiddenField(responseHTML, "__VIEWSTATE")
+		form.EventValidation = ExtractHiddenField(responseHTML, "__EVENTVALIDATION")
+
+		s.logger.Debug("Activity submitted successfully", "index", i+1)
+	}
+
+	s.logger.Info("SubmitINTACodes complete: All activities submitted")
+	return nil
+}

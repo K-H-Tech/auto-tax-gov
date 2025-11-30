@@ -1200,6 +1200,31 @@
                 <p>کد استاندارد فعالیت اقتصادی (مجموع درصدها باید ۱۰۰٪ باشد)</p>
             </div>
 
+            <!-- Search Section -->
+            <div class="help-panel" style="background: #f0f9ff; border-color: #0ea5e9; margin-bottom: 24px;">
+                <div class="help-header">
+                    <span class="help-icon">🔍</span>
+                    <h3 style="color: #0369a1;">جستجوی کد فعالیت</h3>
+                </div>
+                <div class="help-content">
+                    <div style="margin-bottom: 12px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #374151;">جستجو در
+                            عناوین کدها</label>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <input type="text" id="intaSearchKeyword" placeholder="حداقل ۳ حرف وارد کنید..."
+                                style="flex: 1; width: auto; min-width: 0; height: 40px; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; font-family: inherit; box-sizing: border-box;"
+                                onkeypress="if(event.key==='Enter'){searchINTACodes();event.preventDefault();}">
+                            <button type="button" onclick="searchINTACodes()"
+                                style="height: 40px; padding: 0 14px; background: #1a1a1a; color: white; border: none; border-radius: 6px; font-size: 13px; font-family: inherit; cursor: pointer; white-space: nowrap;">جستجو</button>
+                        </div>
+                    </div>
+                    <div id="intaSearchResults"
+                        style="display: none; max-height: 200px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: var(--radius-md); margin-top: 8px; background: white;">
+                        <!-- Search results will be populated here -->
+                    </div>
+                </div>
+            </div>
+
             <div id="intaCodeFormContainer">
                 <div class="card-list" id="intaCodeList">
                     <!-- INTA code cards will be added here dynamically -->
@@ -1228,7 +1253,8 @@
 
             <form id="vatStatusForm">
                 <div class="form-group">
-                    <label for="vatEligibilityStatus">وضعیت مشمولیت مودی <span style="color: var(--color-error);">*</span></label>
+                    <label for="vatEligibilityStatus">وضعیت مشمولیت مودی <span
+                            style="color: var(--color-error);">*</span></label>
                     <select id="vatEligibilityStatus" name="vatEligibilityStatus" required>
                         <option value="" disabled selected>انتخاب کنید...</option>
                         <option value="exempt">معاف</option>
@@ -1249,15 +1275,14 @@
                 <div class="form-group">
                     <label for="vatEligibilityDate">تاریخ مشمولیت</label>
                     <input type="text" id="vatEligibilityDate" name="vatEligibilityDate"
-                           placeholder="برای انتخاب تاریخ کلیک کنید"
-                           readonly style="direction: ltr; text-align: left; cursor: pointer;">
+                        placeholder="برای انتخاب تاریخ کلیک کنید" readonly
+                        style="direction: ltr; text-align: left; cursor: pointer;">
                 </div>
 
                 <div class="form-group">
                     <label for="salesAmount">فروش و عرضه کالا و خدمات (ریال)</label>
-                    <input type="text" id="salesAmount" name="salesAmount"
-                           placeholder="مبلغ فروش سالانه"
-                           inputmode="numeric" style="direction: ltr; text-align: left;">
+                    <input type="text" id="salesAmount" name="salesAmount" placeholder="مبلغ فروش سالانه"
+                        inputmode="numeric" style="direction: ltr; text-align: left;">
                 </div>
 
                 <button type="submit" class="btn-primary" id="vatStatusBtn">ثبت وضعیت و ادامه</button>
@@ -1295,24 +1320,23 @@
 
             <form id="geoLocationForm">
                 <div class="form-group">
-                    <label for="latitude">عرض جغرافیایی (Latitude) <span style="color: var(--color-error);">*</span></label>
-                    <input type="text" id="latitude" name="latitude"
-                           placeholder="مثال: 35.6892"
-                           inputmode="decimal" pattern="-?[0-9]*\.?[0-9]+"
-                           style="direction: ltr; text-align: left;" required>
+                    <label for="latitude">عرض جغرافیایی (Latitude) <span
+                            style="color: var(--color-error);">*</span></label>
+                    <input type="text" id="latitude" name="latitude" placeholder="مثال: 35.6892" inputmode="decimal"
+                        pattern="-?[0-9]*\.?[0-9]+" style="direction: ltr; text-align: left;" required>
                     <p class="hint">مثال: 35.6892 برای تهران</p>
                 </div>
 
                 <div class="form-group">
-                    <label for="longitude">طول جغرافیایی (Longitude) <span style="color: var(--color-error);">*</span></label>
-                    <input type="text" id="longitude" name="longitude"
-                           placeholder="مثال: 51.3890"
-                           inputmode="decimal" pattern="-?[0-9]*\.?[0-9]+"
-                           style="direction: ltr; text-align: left;" required>
+                    <label for="longitude">طول جغرافیایی (Longitude) <span
+                            style="color: var(--color-error);">*</span></label>
+                    <input type="text" id="longitude" name="longitude" placeholder="مثال: 51.3890" inputmode="decimal"
+                        pattern="-?[0-9]*\.?[0-9]+" style="direction: ltr; text-align: left;" required>
                     <p class="hint">مثال: 51.3890 برای تهران</p>
                 </div>
 
-                <div class="form-group" style="background: #f0f9ff; border: 1px solid #0ea5e9; border-radius: var(--radius-md); padding: 16px; margin-bottom: 20px;">
+                <div class="form-group"
+                    style="background: #f0f9ff; border: 1px solid #0ea5e9; border-radius: var(--radius-md); padding: 16px; margin-bottom: 20px;">
                     <p style="color: #0369a1; font-size: 14px; margin: 0;">
                         <strong>راهنما:</strong> برای پیدا کردن مختصات، می‌توانید از Google Maps استفاده کنید:
                         <br>۱. به maps.google.com بروید
@@ -1332,7 +1356,8 @@
                 <p>بررسی نهایی و ارسال درخواست ثبت‌نام</p>
             </div>
 
-            <div id="deficienciesList" class="help-panel" style="display: none; background: #fef2f2; border-color: #fecaca;">
+            <div id="deficienciesList" class="help-panel"
+                style="display: none; background: #fef2f2; border-color: #fecaca;">
                 <div class="help-header">
                     <span class="help-icon">⚠️</span>
                     <h3 style="color: #991b1b;">نواقص موجود</h3>
@@ -1345,7 +1370,8 @@
                 </div>
             </div>
 
-            <div id="confirmationSummary" style="background: #f0fdf4; border: 1px solid #86efac; border-radius: var(--radius-md); padding: 20px; margin-bottom: 20px;">
+            <div id="confirmationSummary"
+                style="background: #f0fdf4; border: 1px solid #86efac; border-radius: var(--radius-md); padding: 20px; margin-bottom: 20px;">
                 <h3 style="color: #166534; margin-bottom: 12px;">خلاصه اطلاعات ثبت‌نام</h3>
                 <div id="summaryContent" style="color: #15803d; font-size: 14px; line-height: 1.8;">
                     <!-- Summary will be populated dynamically -->
@@ -2514,7 +2540,100 @@
         // INTA CODE MANAGEMENT (Step 5)
         // =====================
 
-        // Add a new INTA code card
+        // Search INTA codes by keyword
+        async function searchINTACodes() {
+            const keyword = document.getElementById('intaSearchKeyword').value.trim();
+            const resultsDiv = document.getElementById('intaSearchResults');
+
+            if (keyword.length < 3) {
+                showStatus('کلمه کلیدی باید حداقل ۳ حرف باشد', 'error');
+                return;
+            }
+
+            resultsDiv.innerHTML = '<div style="padding: 12px; text-align: center; color: #6b7280;">در حال جستجو...</div>';
+            resultsDiv.style.display = 'block';
+
+            try {
+                const response = await fetch(`/api/register/inta-code/search?q=${encodeURIComponent(keyword)}`);
+                const data = await response.json();
+
+                if (data.success && data.data && data.data.results && data.data.results.length > 0) {
+                    resultsDiv.innerHTML = data.data.results.map(r => `
+                        <div class="search-result-item" onclick="selectINTAFromSearch('${r.code}', '${escapeHtml(r.fullPath)}')"
+                             style="padding: 12px; border-bottom: 1px solid #e5e7eb; cursor: pointer; transition: background 0.2s;"
+                             onmouseover="this.style.background='#f0f9ff'" onmouseout="this.style.background='white'">
+                            <span style="font-weight: bold; color: #0369a1;">[${r.code}]</span>
+                            <span style="color: #374151; margin-right: 8px;">${escapeHtml(r.fullPath)}</span>
+                        </div>
+                    `).join('');
+                } else {
+                    resultsDiv.innerHTML = '<div style="padding: 12px; text-align: center; color: #6b7280;">نتیجه‌ای یافت نشد</div>';
+                }
+            } catch (error) {
+                resultsDiv.innerHTML = `<div style="padding: 12px; text-align: center; color: #dc2626;">خطا: ${error.message}</div>`;
+            }
+        }
+
+        // Escape HTML to prevent XSS
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Select INTA code from search results
+        function selectINTAFromSearch(code, fullPath) {
+            // Add a new INTA code card with the selected code
+            intaCodeCounter++;
+            const intaId = intaCodeCounter;
+            const intaCodeList = document.getElementById('intaCodeList');
+
+            const card = document.createElement('div');
+            card.className = 'partner-card';
+            card.id = `inta-${intaId}`;
+            card.innerHTML = `
+                <div class="card-header">
+                    <span class="card-title">کد فعالیت ${toPersianNum(intaId)}</span>
+                    <button type="button" class="btn-remove" onclick="removeIntaCode(${intaId})">حذف</button>
+                </div>
+                <div class="card-row">
+                    <div class="form-group">
+                        <label>کد فعالیت انتخاب شده</label>
+                        <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: var(--radius-sm); padding: 12px;">
+                            <strong style="color: #166534;">[${code}]</strong>
+                            <span style="color: #15803d; margin-right: 8px;">${fullPath}</span>
+                        </div>
+                        <input type="hidden" id="inta-code-${intaId}" value="${code}">
+                        <input type="hidden" id="inta-fullpath-${intaId}" value="${fullPath}">
+                    </div>
+                    <div class="form-group small">
+                        <label>درصد <span style="color: var(--color-error);">*</span></label>
+                        <input type="number" id="inta-percent-${intaId}"
+                               placeholder="۰" min="1" max="100"
+                               style="direction: ltr; text-align: center;"
+                               onchange="updateIntaCodeTotal()">
+                    </div>
+                </div>
+                <div class="card-row">
+                    <div class="form-group">
+                        <label>شرح فعالیت <span style="color: var(--color-error);">*</span></label>
+                        <input type="text" id="inta-desc-${intaId}"
+                               placeholder="توضیحات فعالیت"
+                               style="direction: rtl; text-align: right;">
+                    </div>
+                </div>
+            `;
+
+            intaCodeList.appendChild(card);
+            updateIntaCodeTotal();
+
+            // Hide search results and clear search input
+            document.getElementById('intaSearchResults').style.display = 'none';
+            document.getElementById('intaSearchKeyword').value = '';
+            showStatus(`کد فعالیت [${code}] اضافه شد`, 'success');
+        }
+
+        // Add a new INTA code card with cascade dropdowns
         function addIntaCode() {
             intaCodeCounter++;
             const intaId = intaCodeCounter;
@@ -2530,12 +2649,13 @@
                 </div>
                 <div class="card-row">
                     <div class="form-group">
-                        <label>کد استاندارد فعالیت <span style="color: var(--color-error);">*</span></label>
-                        <input type="text" id="inta-code-${intaId}"
-                               placeholder="مثال: 4711"
-                               maxlength="10"
-                               style="direction: ltr; text-align: left;">
-                        <p class="hint">کد ISIC یا کد فعالیت اقتصادی</p>
+                        <label>نوع فعالیت (سطح ۱) <span style="color: var(--color-error);">*</span></label>
+                        <select id="inta-level1-${intaId}" onchange="loadINTALevel2(${intaId})">
+                            <option value="" disabled selected>انتخاب کنید...</option>
+                            <option value="1">[۱] تولید</option>
+                            <option value="2">[۲] بازرگانی</option>
+                            <option value="3">[۳] خدمات</option>
+                        </select>
                     </div>
                     <div class="form-group small">
                         <label>درصد <span style="color: var(--color-error);">*</span></label>
@@ -2545,30 +2665,133 @@
                                onchange="updateIntaCodeTotal()">
                     </div>
                 </div>
-                <div class="card-row">
+                <div class="card-row" id="inta-level2-container-${intaId}" style="display: none;">
                     <div class="form-group">
-                        <label>توضیحات فعالیت</label>
-                        <input type="text" id="inta-desc-${intaId}"
-                               placeholder="شرح فعالیت"
-                               style="direction: rtl; text-align: right;">
+                        <label>زیرمجموعه (سطح ۲)</label>
+                        <select id="inta-level2-${intaId}" onchange="loadINTALevel3(${intaId})" disabled>
+                            <option value="" disabled selected>ابتدا نوع فعالیت را انتخاب کنید</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="card-row" id="inta-level3-container-${intaId}" style="display: none;">
+                    <div class="form-group">
+                        <label>زیرمجموعه (سطح ۳)</label>
+                        <select id="inta-level3-${intaId}" onchange="loadINTALevel4(${intaId})" disabled>
+                            <option value="" disabled selected>ابتدا سطح ۲ را انتخاب کنید</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="card-row" id="inta-code-container-${intaId}" style="display: none;">
+                    <div class="form-group">
+                        <label>کد نهایی</label>
+                        <select id="inta-code-${intaId}" disabled>
+                            <option value="" disabled selected>ابتدا سطح ۳ را انتخاب کنید</option>
+                        </select>
                     </div>
                 </div>
                 <div class="card-row">
                     <div class="form-group">
-                        <label>نوع فعالیت <span style="color: var(--color-error);">*</span></label>
-                        <select id="inta-type-${intaId}">
-                            <option value="" disabled selected>انتخاب کنید...</option>
-                            <option value="production">تولیدی</option>
-                            <option value="service">خدماتی</option>
-                            <option value="commercial">بازرگانی</option>
-                            <option value="mixed">ترکیبی</option>
-                        </select>
+                        <label>شرح فعالیت <span style="color: var(--color-error);">*</span></label>
+                        <input type="text" id="inta-desc-${intaId}"
+                               placeholder="توضیحات فعالیت"
+                               style="direction: rtl; text-align: right;">
                     </div>
                 </div>
             `;
 
             intaCodeList.appendChild(card);
             updateIntaCodeTotal();
+        }
+
+        // Load Level 2 options based on Level 1 selection
+        async function loadINTALevel2(intaId) {
+            const level1 = document.getElementById(`inta-level1-${intaId}`).value;
+            if (!level1) return;
+
+            const level2Select = document.getElementById(`inta-level2-${intaId}`);
+            const level2Container = document.getElementById(`inta-level2-container-${intaId}`);
+
+            level2Select.innerHTML = '<option value="" disabled selected>در حال بارگذاری...</option>';
+            level2Container.style.display = 'block';
+
+            try {
+                const response = await fetch(`/api/register/inta-code/cascade?level=2&parents=${level1}`);
+                const data = await response.json();
+
+                if (data.success && data.data && data.data.options && data.data.options.length > 0) {
+                    level2Select.innerHTML = '<option value="" disabled selected>انتخاب کنید...</option>' +
+                        data.data.options.map(opt => `<option value="${opt.value}">${opt.label}</option>`).join('');
+                    level2Select.disabled = false;
+                } else {
+                    level2Select.innerHTML = '<option value="" disabled selected>موردی یافت نشد</option>';
+                }
+            } catch (error) {
+                level2Select.innerHTML = '<option value="" disabled selected>خطا در بارگذاری</option>';
+            }
+
+            // Reset lower levels
+            document.getElementById(`inta-level3-container-${intaId}`).style.display = 'none';
+            document.getElementById(`inta-code-container-${intaId}`).style.display = 'none';
+        }
+
+        // Load Level 3 options
+        async function loadINTALevel3(intaId) {
+            const level1 = document.getElementById(`inta-level1-${intaId}`).value;
+            const level2 = document.getElementById(`inta-level2-${intaId}`).value;
+            if (!level2) return;
+
+            const level3Select = document.getElementById(`inta-level3-${intaId}`);
+            const level3Container = document.getElementById(`inta-level3-container-${intaId}`);
+
+            level3Select.innerHTML = '<option value="" disabled selected>در حال بارگذاری...</option>';
+            level3Container.style.display = 'block';
+
+            try {
+                const response = await fetch(`/api/register/inta-code/cascade?level=3&parents=${level1},${level2}`);
+                const data = await response.json();
+
+                if (data.success && data.data && data.data.options && data.data.options.length > 0) {
+                    level3Select.innerHTML = '<option value="" disabled selected>انتخاب کنید...</option>' +
+                        data.data.options.map(opt => `<option value="${opt.value}">${opt.label}</option>`).join('');
+                    level3Select.disabled = false;
+                } else {
+                    level3Select.innerHTML = '<option value="" disabled selected>موردی یافت نشد</option>';
+                }
+            } catch (error) {
+                level3Select.innerHTML = '<option value="" disabled selected>خطا در بارگذاری</option>';
+            }
+
+            // Reset lower level
+            document.getElementById(`inta-code-container-${intaId}`).style.display = 'none';
+        }
+
+        // Load Level 4 (final code) options
+        async function loadINTALevel4(intaId) {
+            const level1 = document.getElementById(`inta-level1-${intaId}`).value;
+            const level2 = document.getElementById(`inta-level2-${intaId}`).value;
+            const level3 = document.getElementById(`inta-level3-${intaId}`).value;
+            if (!level3) return;
+
+            const codeSelect = document.getElementById(`inta-code-${intaId}`);
+            const codeContainer = document.getElementById(`inta-code-container-${intaId}`);
+
+            codeSelect.innerHTML = '<option value="" disabled selected>در حال بارگذاری...</option>';
+            codeContainer.style.display = 'block';
+
+            try {
+                const response = await fetch(`/api/register/inta-code/cascade?level=4&parents=${level1},${level2},${level3}`);
+                const data = await response.json();
+
+                if (data.success && data.data && data.data.options && data.data.options.length > 0) {
+                    codeSelect.innerHTML = '<option value="" disabled selected>انتخاب کنید...</option>' +
+                        data.data.options.map(opt => `<option value="${opt.value}">${opt.label}</option>`).join('');
+                    codeSelect.disabled = false;
+                } else {
+                    codeSelect.innerHTML = '<option value="" disabled selected>موردی یافت نشد</option>';
+                }
+            } catch (error) {
+                codeSelect.innerHTML = '<option value="" disabled selected>خطا در بارگذاری</option>';
+            }
         }
 
         // Remove an INTA code card
@@ -2613,12 +2836,37 @@
 
             cards.forEach(card => {
                 const id = card.id.replace('inta-', '');
-                const code = document.getElementById(`inta-code-${id}`).value;
+
+                // Get code - either from hidden input (search) or select (cascade)
+                let code = '';
+                const hiddenCode = document.getElementById(`inta-code-${id}`);
+                if (hiddenCode) {
+                    code = hiddenCode.value;
+                }
+
+                // Get fullpath if available (from search)
+                const fullpathInput = document.getElementById(`inta-fullpath-${id}`);
+                const fullpath = fullpathInput ? fullpathInput.value : '';
+
+                // Get levels for cascade selection
+                const levels = [];
+                const level1 = document.getElementById(`inta-level1-${id}`);
+                if (level1 && level1.value) {
+                    levels.push({ level: 1, value: level1.value, label: level1.options[level1.selectedIndex].text });
+                }
+                const level2 = document.getElementById(`inta-level2-${id}`);
+                if (level2 && level2.value && !level2.disabled) {
+                    levels.push({ level: 2, value: level2.value, label: level2.options[level2.selectedIndex].text });
+                }
+                const level3 = document.getElementById(`inta-level3-${id}`);
+                if (level3 && level3.value && !level3.disabled) {
+                    levels.push({ level: 3, value: level3.value, label: level3.options[level3.selectedIndex].text });
+                }
+
                 const percent = parseInt(document.getElementById(`inta-percent-${id}`).value, 10) || 0;
                 const description = document.getElementById(`inta-desc-${id}`).value;
-                const activityType = document.getElementById(`inta-type-${id}`).value;
 
-                intaCodes.push({ code, percent, description, activityType });
+                intaCodes.push({ code, fullpath, levels, percent, description });
             });
 
             return intaCodes;
@@ -2644,12 +2892,13 @@
             // Validate each INTA code
             for (let i = 0; i < intaCodes.length; i++) {
                 const ic = intaCodes[i];
-                if (!ic.code) {
-                    showStatus(`کد فعالیت ${toPersianNum(i + 1)} را وارد کنید`, 'error');
+                // Check if code was selected (either from search or cascade)
+                if (!ic.code && (!ic.levels || ic.levels.length === 0)) {
+                    showStatus(`لطفاً کد فعالیت ${toPersianNum(i + 1)} را انتخاب کنید`, 'error');
                     return;
                 }
-                if (!ic.activityType) {
-                    showStatus(`نوع فعالیت ${toPersianNum(i + 1)} را انتخاب کنید`, 'error');
+                if (!ic.description) {
+                    showStatus(`شرح فعالیت ${toPersianNum(i + 1)} را وارد کنید`, 'error');
                     return;
                 }
             }
@@ -2660,10 +2909,18 @@
             stepState.setActive(5);
 
             try {
-                const response = await fetch('/api/register/inta-code/submit', {
+                // Map frontend intaCodes to backend activities structure
+                const activities = intaCodes.map(ic => ({
+                    levels: ic.levels || [],
+                    code: ic.code || '',
+                    description: ic.description,
+                    percent: ic.percent
+                }));
+
+                const response = await fetch('/api/register/inta-code/activities', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ intaCodes: intaCodes })
+                    body: JSON.stringify({ activities: activities })
                 });
 
                 const data = await response.json();

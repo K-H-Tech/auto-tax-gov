@@ -65,6 +65,10 @@ func New(cfg *config.Config, logger *slog.Logger, webDir string) *Server {
 	// INTA Code API routes
 	mux.HandleFunc("/api/register/inta-code/options", h.HandleGetINTACodeOptions)
 	mux.HandleFunc("/api/register/inta-code/submit", h.HandleSubmitINTACode)
+	mux.HandleFunc("/api/register/inta-code/search", h.HandleSearchINTACodes)
+	mux.HandleFunc("/api/register/inta-code/form", h.HandleGetINTACodeForm)
+	mux.HandleFunc("/api/register/inta-code/cascade", h.HandleGetINTACascadeOptions)
+	mux.HandleFunc("/api/register/inta-code/activities", h.HandleSubmitINTACodes)
 
 	// Bank Account (SHEBA) API routes
 	mux.HandleFunc("/api/register/sheba/submit", h.HandleSubmitShebaNumber)
