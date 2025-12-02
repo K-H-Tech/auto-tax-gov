@@ -593,17 +593,32 @@ func (s *Service) SubmitBasicInfo(sess *session.Session, req *models.BasicInfoRe
 		"ctl00$CPC$TextBoxFinantialStartDate": req.StartDate,
 		"ctl00$CPC$TextBoxPDName":             req.UnitTitle,
 		"ctl00$CPC$DDLGroupOneTypes":          req.EightCategoryJob,
-		"ctl00$CPC$DDLPDNewLegalGroup":        req.ProfessionalGuild,
-		"ctl00$CPC$DDLPDLegalType":            req.GuildUnion,
 		"ctl00$CPC$DDLHasJobLicence":          req.BusinessLicense,
 		"ctl00$CPC$DDLPDOwnership":            req.OwnershipType,
+
+		// Financial year start date (required by form)
+		"ctl00$CPC$DDLFinantialDayStart":   "1",
+		"ctl00$CPC$DDLFinantialMonthStart": "1",
+
+		// Searchable dropdowns - Select2-style controls
+		// DDLPDLegalType = اتحادیه صنفی ذیربط (Guild Union)
+		// DDLPDNewLegalGroup = مجامع حرفه ای (Professional Assembly) - REQUIRED
+		// DDLPDNewLegalType = اتحادیه صنفی جدید (cascading from Professional Assembly)
+		"ctl00$CPC$DDLPDLegalType":     req.GuildUnion,
+		"ctl00$CPC$DDLPDNewLegalGroup": req.ProfessionalAssembly,
+		"ctl00$CPC$DDLPDNewLegalType":  req.NewGuildUnion,
 
 		// Hidden field + Submit button
 		"ctl00$CPC$HFGUID":       regID,
 		"ctl00$CPC$ButtonPRSave": "ثبت",
 	}
 
-	// Add optional fields
+	// Professional Assembly fallback - use ProfessionalGuild if Assembly not provided
+	if req.ProfessionalAssembly == "" && req.ProfessionalGuild != "" {
+		formFields["ctl00$CPC$DDLPDNewLegalGroup"] = req.ProfessionalGuild
+	}
+
+	// Add optional contact fields
 	if req.Website != "" {
 		formFields["ctl00$CPC$TextBoxAddressWebsite"] = req.Website
 	}

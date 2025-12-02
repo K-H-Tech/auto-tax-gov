@@ -1251,16 +1251,18 @@ func (s *Service) SearchINTACodes(sess *session.Session, keyword string) ([]INTA
 	}
 
 	// Build search payload
+	// ASP.NET Web Forms control naming: ctl00$CPC$TextboxActivityINTACode$TextboxINTASearch (nested user control)
+	// ScriptManager format: UpdatePanel ID|Button ID
 	payload := url.Values{}
-	payload.Set("ctl00$SMaster", "ctl00$CPC$UPActivityINTACode|ctl00$CPC$ButtonActivityINTACodeSearch")
+	payload.Set("ctl00$SMaster", "ctl00$CPC$TextboxActivityINTACode$UPINTA|ctl00$CPC$TextboxActivityINTACode$ButtonINTASearch")
 	payload.Set("__EVENTTARGET", "")
 	payload.Set("__EVENTARGUMENT", "")
 	payload.Set("__VIEWSTATE", form.ViewState)
 	payload.Set("__VIEWSTATEGENERATOR", form.ViewStateGenerator)
 	payload.Set("__EVENTVALIDATION", form.EventValidation)
 	payload.Set("__ASYNCPOST", "true")
-	payload.Set("ctl00$CPC$TextboxActivityINTACode", keyword)
-	payload.Set("ctl00$CPC$ButtonActivityINTACodeSearch", "جستجو")
+	payload.Set("ctl00$CPC$TextboxActivityINTACode$TextboxINTASearch", keyword)
+	payload.Set("ctl00$CPC$TextboxActivityINTACode$ButtonINTASearch", "جستجو")
 
 	httpReq, err := http.NewRequest("POST", intaURL, strings.NewReader(payload.Encode()))
 	if err != nil {
@@ -1293,11 +1295,23 @@ func (s *Service) SearchINTACodes(sess *session.Session, keyword string) ([]INTA
 		"responseLength", len(bodyStr),
 		"hasUpdatePanel", strings.Contains(bodyStr, "|updatePanel|"),
 		"hasLB", strings.Contains(bodyStr, "LB"),
+		"hasDoPostBack", strings.Contains(bodyStr, "__doPostBack"),
 		"hasTextboxActivityINTACode", strings.Contains(bodyStr, "TextboxActivityINTACode"),
 		"first500chars", truncateString(bodyStr, 500))
 
 	// Parse search results from AJAX response
 	results := parseINTASearchResults(bodyStr)
+
+	// If no results, log more details to help debug
+	if len(results) == 0 {
+		s.logger.Warn("SearchINTACodes: No results found, logging response for debugging",
+			"keyword", keyword,
+			"responseLength", len(bodyStr),
+			"hasUpdatePanel", strings.Contains(bodyStr, "|updatePanel|"),
+			"hasLB", strings.Contains(bodyStr, "LB"),
+			"hasDoPostBack", strings.Contains(bodyStr, "__doPostBack"),
+			"first1000chars", truncateString(bodyStr, 1000))
+	}
 
 	s.logger.Info("SearchINTACodes complete",
 		"keyword", keyword,
@@ -1309,6 +1323,7 @@ func (s *Service) SearchINTACodes(sess *session.Session, keyword string) ([]INTA
 // parseINTASearchResults extracts search results from the AJAX response.
 // ASP.NET AJAX partial postback responses use pipe-delimited format:
 // length|type|id|content|length|type|id|content|...
+// Portal HTML format: <a href="javascript:__doPostBack('ctl00$CPC$TextboxActivityINTACode$LB3210050',”)">• [3210050] [type] description</a>
 func parseINTASearchResults(ajaxResponse string) []INTASearchResult {
 	var results []INTASearchResult
 
@@ -1321,17 +1336,15 @@ func parseINTASearchResults(ajaxResponse string) []INTASearchResult {
 		htmlContent = ajaxResponse
 	}
 
-	// Look for search result items in the response
-	// Pattern: links with javascript:__doPostBack('ctl00$CPC$TextboxActivityINTACode$LB{code}','')
-	// Example: <a href="javascript:__doPostBack('ctl00$CPC$TextboxActivityINTACode$LB3190130','')">• [3190130] [حقیقی/حقوقی] خدمات/...</a>
-	resultRegex := regexp.MustCompile(`(?s)TextboxActivityINTACode\$LB(\d{7})[^>]*>([^<]+)</a>`)
+	// Pattern 1: Match __doPostBack with LB code - most specific pattern
+	// Matches: javascript:__doPostBack('ctl00$CPC$TextboxActivityINTACode$LB3210050','')">• [3210050]...
+	resultRegex := regexp.MustCompile(`__doPostBack\([^)]*\$LB(\d{7})[^)]*\)[^>]*>([^<]+)</a>`)
 	matches := resultRegex.FindAllStringSubmatch(htmlContent, -1)
 
 	for _, match := range matches {
 		if len(match) >= 3 {
-			// Clean up the description - remove bullet point and code prefix
+			// Clean up the description - remove bullet point
 			description := strings.TrimSpace(match[2])
-			// Remove leading bullet and code: "• [3190130] [حقیقی/حقوقی] خدمات/..."
 			description = strings.TrimPrefix(description, "•")
 			description = strings.TrimSpace(description)
 
@@ -1343,9 +1356,9 @@ func parseINTASearchResults(ajaxResponse string) []INTASearchResult {
 		}
 	}
 
-	// Also try alternative pattern with just LB code
+	// Pattern 2: Alternative - match LB code with any surrounding context
 	if len(results) == 0 {
-		altRegex := regexp.MustCompile(`(?s)LB(\d{7})[^>]*>([^<]+)</a>`)
+		altRegex := regexp.MustCompile(`LB(\d{7})['"][^>]*>([^<]+)</a>`)
 		altMatches := altRegex.FindAllStringSubmatch(htmlContent, -1)
 
 		for _, match := range altMatches {
@@ -1363,7 +1376,27 @@ func parseINTASearchResults(ajaxResponse string) []INTASearchResult {
 		}
 	}
 
-	// Last resort: look for [code] pattern in text
+	// Pattern 3: Even simpler - just look for LB followed by 7 digits and text
+	if len(results) == 0 {
+		simpleRegex := regexp.MustCompile(`LB(\d{7})[^>]+>([^<]+)</a>`)
+		simpleMatches := simpleRegex.FindAllStringSubmatch(htmlContent, -1)
+
+		for _, match := range simpleMatches {
+			if len(match) >= 3 {
+				description := strings.TrimSpace(match[2])
+				description = strings.TrimPrefix(description, "•")
+				description = strings.TrimSpace(description)
+
+				result := INTASearchResult{
+					Code:     match[1],
+					FullPath: description,
+				}
+				results = append(results, result)
+			}
+		}
+	}
+
+	// Pattern 4: Last resort - look for [code] pattern in text
 	if len(results) == 0 {
 		lastRegex := regexp.MustCompile(`\[(\d{7})\]\s*(\[[^\]]*\]\s*[^\n<]+)`)
 		lastMatches := lastRegex.FindAllStringSubmatch(htmlContent, -1)
@@ -1386,39 +1419,60 @@ func parseINTASearchResults(ajaxResponse string) []INTASearchResult {
 // Format: length|type|id|content|length|type|id|content|...
 // We look for updatePanel sections that contain our search results.
 func extractUpdatePanelContent(response string) string {
-	// Check if this looks like an AJAX response (starts with number followed by |)
-	if len(response) == 0 || !strings.Contains(response, "|updatePanel|") {
+	// Check if this looks like an AJAX response (contains |updatePanel|)
+	if len(response) == 0 {
+		return ""
+	}
+
+	// If not an AJAX response, return empty (caller will use raw response as fallback)
+	if !strings.Contains(response, "|updatePanel|") {
 		return ""
 	}
 
 	var allContent strings.Builder
-	parts := strings.Split(response, "|")
 
-	i := 0
-	for i < len(parts)-3 {
-		// Try to parse length
-		_, err := fmt.Sscanf(parts[i], "%d", new(int))
-		if err != nil {
-			i++
+	// More robust parsing: find updatePanel markers and extract content between them
+	// The format is: length|updatePanel|panelID|content|...
+	// Content may contain pipe characters, so we use marker-based extraction
+
+	// Split by |updatePanel| to find all update panel sections
+	sections := strings.Split(response, "|updatePanel|")
+
+	for i, section := range sections {
+		if i == 0 {
+			// First section is before any updatePanel, skip it
 			continue
 		}
 
-		// Check if this is an updatePanel
-		if parts[i+1] == "updatePanel" {
-			// parts[i+2] is the panel ID
-			// parts[i+3] is the content
-			if i+3 < len(parts) {
-				content := parts[i+3]
-				// The content might contain the search results
-				if strings.Contains(content, "TextboxActivityINTACode") ||
-					strings.Contains(content, "LB") {
-					allContent.WriteString(content)
-					allContent.WriteString("\n")
-				}
-			}
-			i += 4
+		// After |updatePanel|, the format is: panelID|content|nextLength|...
+		// Find the panel ID (ends at first |)
+		pipeIdx := strings.Index(section, "|")
+		if pipeIdx == -1 {
+			continue
+		}
+
+		// Content starts after panel ID
+		remaining := section[pipeIdx+1:]
+
+		// Find where content ends - it's before the next section marker (digit|type|)
+		// Look for pattern like: |digit| which starts next section
+		endPattern := regexp.MustCompile(`\|\d+\|`)
+		endLoc := endPattern.FindStringIndex(remaining)
+
+		var content string
+		if endLoc != nil {
+			content = remaining[:endLoc[0]]
 		} else {
-			i++
+			// Last section - take everything
+			content = remaining
+		}
+
+		// Only include content that looks like it has search results
+		if strings.Contains(content, "__doPostBack") ||
+			strings.Contains(content, "LB") ||
+			strings.Contains(content, "TextboxActivityINTACode") {
+			allContent.WriteString(content)
+			allContent.WriteString("\n")
 		}
 	}
 
@@ -1516,5 +1570,521 @@ func (s *Service) SubmitINTACodes(sess *session.Session, activities []INTAActivi
 	}
 
 	s.logger.Info("SubmitINTACodes complete: All activities submitted")
+	return nil
+}
+
+// ==================== VAT Status Methods ====================
+
+// GetVATStatusForm fetches the VatStatus form and extracts ASP.NET state.
+// GET https://register.tax.gov.ir/Pages/Preaction/Edit/VatStatus/
+func (s *Service) GetVATStatusForm(sess *session.Session) (*VATStatusFormData, error) {
+	vatURL := s.cfg.Services.RegisterTax.VATStatusURL
+	if vatURL == "" {
+		vatURL = "https://register.tax.gov.ir/Pages/Preaction/Edit/VatStatus/"
+	}
+
+	httpReq, err := http.NewRequest("GET", vatURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("error creating VATStatus request: %w", err)
+	}
+
+	s.client.SetNavigationHeaders(httpReq, s.cfg.Services.RegisterTax.HomePageURL)
+	s.client.AddCookies(httpReq, sess.GetCookies())
+
+	s.logger.Info("GetVATStatusForm: Fetching VAT status form", "url", vatURL)
+
+	resp, err := s.client.Do(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching VATStatus form: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Save cookies
+	if cookies := resp.Cookies(); len(cookies) > 0 {
+		sess.MergeCookies(cookies)
+	}
+
+	if resp.StatusCode == 302 {
+		location := resp.Header.Get("Location")
+		if strings.Contains(location, "/Login") {
+			return nil, fmt.Errorf("not authenticated - redirected to login page")
+		}
+		return nil, fmt.Errorf("VATStatus redirected to %s", location)
+	}
+
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("VATStatus returned status %d", resp.StatusCode)
+	}
+
+	body, err := client.ReadResponseBody(resp)
+	if err != nil {
+		return nil, fmt.Errorf("error reading VATStatus form: %w", err)
+	}
+
+	html := string(body)
+
+	// Parse ASP.NET form state
+	form := &VATStatusFormData{}
+	form.ViewState = ExtractHiddenField(html, "__VIEWSTATE")
+	form.ViewStateGenerator = ExtractHiddenField(html, "__VIEWSTATEGENERATOR")
+	form.EventValidation = ExtractHiddenField(html, "__EVENTVALIDATION")
+
+	s.logger.Info("GetVATStatusForm complete",
+		"viewStateLen", len(form.ViewState))
+
+	return form, nil
+}
+
+// SubmitVATStatus submits VAT eligibility status.
+// POST https://register.tax.gov.ir/Pages/Preaction/Edit/VatStatus/
+func (s *Service) SubmitVATStatus(sess *session.Session, req *VATStatusRequest) error {
+	s.logger.Info("SubmitVATStatus: Submitting VAT status", "eligibility", req.EligibilityType)
+
+	// Get the form state first
+	form, err := s.GetVATStatusForm(sess)
+	if err != nil {
+		return fmt.Errorf("failed to get VAT status form: %w", err)
+	}
+
+	vatURL := s.cfg.Services.RegisterTax.VATStatusURL
+	if vatURL == "" {
+		vatURL = "https://register.tax.gov.ir/Pages/Preaction/Edit/VatStatus/"
+	}
+
+	// Build form payload
+	payload := url.Values{}
+	payload.Set("__VIEWSTATE", form.ViewState)
+	payload.Set("__VIEWSTATEGENERATOR", form.ViewStateGenerator)
+	payload.Set("__EVENTVALIDATION", form.EventValidation)
+	payload.Set("__EVENTTARGET", "")
+	payload.Set("__EVENTARGUMENT", "")
+
+	// VAT status dropdown - ctl00$CPC$DDLVatStatus
+	payload.Set("ctl00$CPC$DDLVatStatus", req.EligibilityType)
+
+	// Submit button
+	payload.Set("ctl00$CPC$ButtonVatStatusSave", "ثبت")
+
+	httpReq, err := http.NewRequest("POST", vatURL, strings.NewReader(payload.Encode()))
+	if err != nil {
+		return fmt.Errorf("error creating VAT status submit request: %w", err)
+	}
+
+	s.client.SetFormSubmitHeaders(httpReq, vatURL)
+	s.client.AddCookies(httpReq, sess.GetCookies())
+
+	resp, err := s.client.Do(httpReq)
+	if err != nil {
+		return fmt.Errorf("error submitting VAT status: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Save cookies
+	if cookies := resp.Cookies(); len(cookies) > 0 {
+		sess.MergeCookies(cookies)
+	}
+
+	body, err := client.ReadResponseBody(resp)
+	if err != nil {
+		return fmt.Errorf("error reading VAT status response: %w", err)
+	}
+
+	responseHTML := string(body)
+
+	// Check for errors
+	if resp.StatusCode == 200 {
+		if strings.Contains(responseHTML, "خطا") && !strings.Contains(responseHTML, "بدون خطا") {
+			s.logger.Warn("VAT status submission may have errors", "preview", truncateString(responseHTML, 500))
+			return fmt.Errorf("VAT status submission returned errors")
+		}
+		s.logger.Info("SubmitVATStatus complete: VAT status submitted successfully")
+		return nil
+	}
+
+	if resp.StatusCode >= 300 && resp.StatusCode < 400 {
+		location := resp.Header.Get("Location")
+		s.logger.Info("SubmitVATStatus: Redirected after submission", "location", location)
+		return nil
+	}
+
+	return fmt.Errorf("VAT status submission returned status %d", resp.StatusCode)
+}
+
+// ==================== SHEBA (Bank Account) Methods ====================
+
+// GetShebaForm fetches the AddShebaNumber form and extracts ASP.NET state.
+// GET https://register.tax.gov.ir/Pages/Preaction/Edit/AddShebaNumber/
+func (s *Service) GetShebaForm(sess *session.Session) (*ShebaFormData, error) {
+	shebaURL := s.cfg.Services.RegisterTax.AddShebaNumberURL
+	if shebaURL == "" {
+		shebaURL = "https://register.tax.gov.ir/Pages/Preaction/Edit/AddShebaNumber/"
+	}
+
+	httpReq, err := http.NewRequest("GET", shebaURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("error creating SHEBA form request: %w", err)
+	}
+
+	s.client.SetNavigationHeaders(httpReq, s.cfg.Services.RegisterTax.HomePageURL)
+	s.client.AddCookies(httpReq, sess.GetCookies())
+
+	s.logger.Info("GetShebaForm: Fetching SHEBA form", "url", shebaURL)
+
+	resp, err := s.client.Do(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching SHEBA form: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Save cookies
+	if cookies := resp.Cookies(); len(cookies) > 0 {
+		sess.MergeCookies(cookies)
+	}
+
+	if resp.StatusCode == 302 {
+		location := resp.Header.Get("Location")
+		if strings.Contains(location, "/Login") {
+			return nil, fmt.Errorf("not authenticated - redirected to login page")
+		}
+		return nil, fmt.Errorf("SHEBA form redirected to %s", location)
+	}
+
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("SHEBA form returned status %d", resp.StatusCode)
+	}
+
+	body, err := client.ReadResponseBody(resp)
+	if err != nil {
+		return nil, fmt.Errorf("error reading SHEBA form: %w", err)
+	}
+
+	html := string(body)
+
+	// Parse ASP.NET form state
+	form := &ShebaFormData{}
+	form.ViewState = ExtractHiddenField(html, "__VIEWSTATE")
+	form.ViewStateGenerator = ExtractHiddenField(html, "__VIEWSTATEGENERATOR")
+	form.EventValidation = ExtractHiddenField(html, "__EVENTVALIDATION")
+
+	// Parse existing SHEBA accounts
+	form.Accounts = parseBankAccountsTable(html)
+
+	s.logger.Info("GetShebaForm complete",
+		"viewStateLen", len(form.ViewState),
+		"existingAccounts", len(form.Accounts))
+
+	return form, nil
+}
+
+// SubmitSheba submits a new SHEBA (bank account) number.
+// POST https://register.tax.gov.ir/Pages/Preaction/Edit/AddShebaNumber/
+func (s *Service) SubmitSheba(sess *session.Session, req *ShebaSubmitRequest) error {
+	s.logger.Info("SubmitSheba: Submitting SHEBA number", "iban", req.IBAN)
+
+	// Clean IBAN - remove IR prefix if present
+	iban := strings.TrimPrefix(strings.TrimPrefix(req.IBAN, "IR"), "ir")
+	if len(iban) != 24 {
+		return fmt.Errorf("invalid SHEBA number: must be 24 digits (got %d)", len(iban))
+	}
+
+	// Get the form state first
+	form, err := s.GetShebaForm(sess)
+	if err != nil {
+		return fmt.Errorf("failed to get SHEBA form: %w", err)
+	}
+
+	shebaURL := s.cfg.Services.RegisterTax.AddShebaNumberURL
+	if shebaURL == "" {
+		shebaURL = "https://register.tax.gov.ir/Pages/Preaction/Edit/AddShebaNumber/"
+	}
+
+	// Build form payload
+	payload := url.Values{}
+	payload.Set("__VIEWSTATE", form.ViewState)
+	payload.Set("__VIEWSTATEGENERATOR", form.ViewStateGenerator)
+	payload.Set("__EVENTVALIDATION", form.EventValidation)
+	payload.Set("__EVENTTARGET", "")
+	payload.Set("__EVENTARGUMENT", "")
+
+	// SHEBA fields - ctl00$CPC$TextboxSheba and ctl00$CPC$TextboxShebaDate
+	payload.Set("ctl00$CPC$TextboxSheba", iban)
+	payload.Set("ctl00$CPC$TextboxShebaDate", req.StartDate)
+
+	// Submit button
+	payload.Set("ctl00$CPC$ButtonShebaSave", "ثبت")
+
+	httpReq, err := http.NewRequest("POST", shebaURL, strings.NewReader(payload.Encode()))
+	if err != nil {
+		return fmt.Errorf("error creating SHEBA submit request: %w", err)
+	}
+
+	s.client.SetFormSubmitHeaders(httpReq, shebaURL)
+	s.client.AddCookies(httpReq, sess.GetCookies())
+
+	resp, err := s.client.Do(httpReq)
+	if err != nil {
+		return fmt.Errorf("error submitting SHEBA: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Save cookies
+	if cookies := resp.Cookies(); len(cookies) > 0 {
+		sess.MergeCookies(cookies)
+	}
+
+	body, err := client.ReadResponseBody(resp)
+	if err != nil {
+		return fmt.Errorf("error reading SHEBA response: %w", err)
+	}
+
+	responseHTML := string(body)
+
+	// Check for errors
+	if resp.StatusCode == 200 {
+		if strings.Contains(responseHTML, "خطا") && !strings.Contains(responseHTML, "بدون خطا") {
+			// Extract specific error message if present
+			if strings.Contains(responseHTML, "الگو شماره شبا نادرست است") {
+				return fmt.Errorf("invalid SHEBA format: الگو شماره شبا نادرست است")
+			}
+			s.logger.Warn("SHEBA submission may have errors", "preview", truncateString(responseHTML, 500))
+			return fmt.Errorf("SHEBA submission returned errors")
+		}
+		s.logger.Info("SubmitSheba complete: SHEBA submitted successfully")
+		return nil
+	}
+
+	if resp.StatusCode >= 300 && resp.StatusCode < 400 {
+		location := resp.Header.Get("Location")
+		s.logger.Info("SubmitSheba: Redirected after submission", "location", location)
+		return nil
+	}
+
+	return fmt.Errorf("SHEBA submission returned status %d", resp.StatusCode)
+}
+
+// ==================== Complete Registration Flow ====================
+
+// ExecuteCompleteRegistration executes the entire registration process automatically.
+// User provides only essential PII data; all dropdown/selective values use config defaults.
+//
+// Flow:
+//  1. Create registration on my.tax.gov.ir
+//  2. Cross-domain auth to register.tax.gov.ir
+//  3. Submit PublicData (defaults from config)
+//  4. Submit INTA code (defaults from config)
+//  5. Submit VAT status (defaults from config)
+//  6. Submit SHEBA number (user input)
+//  7. [If partnership] Submit members
+func (s *Service) ExecuteCompleteRegistration(sess *session.Session, req *CompleteRegistrationRequest) (*CompleteRegistrationResponse, error) {
+	response := &CompleteRegistrationResponse{
+		Steps: make([]StepResult, 0, 8),
+	}
+
+	s.logger.Info("ExecuteCompleteRegistration: Starting automated registration",
+		"postalCode", req.PostalCode,
+		"businessName", req.BusinessName,
+		"type", req.RegistrationType)
+
+	// Determine registration type
+	regType := "Single"
+	if req.RegistrationType == "partnership" {
+		regType = "Multiple"
+	}
+
+	// Step 1: Create new registration
+	regReq := &RegistrationRequest{
+		Type:         regType,
+		PostalCode:   req.PostalCode,
+		BusinessName: req.BusinessName,
+	}
+
+	regResp, err := s.NewRegistration(sess, regReq)
+	if err != nil {
+		response.Steps = append(response.Steps, StepResult{Step: 1, Name: "NewRegistration", Success: false, Message: err.Error()})
+		return response, fmt.Errorf("step 1 (NewRegistration) failed: %w", err)
+	}
+	response.Steps = append(response.Steps, StepResult{Step: 1, Name: "NewRegistration", Success: true, URL: s.cfg.Services.MyTax.RegistrationURL})
+	response.GUID = regResp.GUID
+
+	// Step 2: Get SSO URL
+	ssoResp, err := s.GetSSOUrl(sess, regResp.GUID)
+	if err != nil {
+		response.Steps = append(response.Steps, StepResult{Step: 2, Name: "GetSSOUrl", Success: false, Message: err.Error()})
+		return response, fmt.Errorf("step 2 (GetSSOUrl) failed: %w", err)
+	}
+	response.Steps = append(response.Steps, StepResult{Step: 2, Name: "GetSSOUrl", Success: true, URL: ssoResp.URL})
+
+	// Step 3: Authenticate to register.tax.gov.ir
+	if err := s.AuthenticateToRegister(sess, ssoResp.URL); err != nil {
+		response.Steps = append(response.Steps, StepResult{Step: 3, Name: "AuthenticateToRegister", Success: false, Message: err.Error()})
+		return response, fmt.Errorf("step 3 (AuthenticateToRegister) failed: %w", err)
+	}
+	response.Steps = append(response.Steps, StepResult{Step: 3, Name: "AuthenticateToRegister", Success: true, Message: "Cross-domain auth completed"})
+
+	// Step 4: Submit PublicData with defaults
+	if err := s.submitPublicDataWithDefaults(sess, req.BusinessName); err != nil {
+		response.Steps = append(response.Steps, StepResult{Step: 4, Name: "SubmitPublicData", Success: false, Message: err.Error()})
+		return response, fmt.Errorf("step 4 (SubmitPublicData) failed: %w", err)
+	}
+	response.Steps = append(response.Steps, StepResult{Step: 4, Name: "SubmitPublicData", Success: true, Message: "Basic info submitted with defaults"})
+
+	// Step 5: Submit INTA code with defaults
+	if err := s.submitINTACodeWithDefaults(sess); err != nil {
+		response.Steps = append(response.Steps, StepResult{Step: 5, Name: "SubmitINTACode", Success: false, Message: err.Error()})
+		return response, fmt.Errorf("step 5 (SubmitINTACode) failed: %w", err)
+	}
+	response.Steps = append(response.Steps, StepResult{Step: 5, Name: "SubmitINTACode", Success: true, Message: "INTA code submitted with defaults"})
+
+	// Step 6: Submit VAT status with defaults
+	if err := s.submitVATStatusWithDefaults(sess); err != nil {
+		response.Steps = append(response.Steps, StepResult{Step: 6, Name: "SubmitVATStatus", Success: false, Message: err.Error()})
+		return response, fmt.Errorf("step 6 (SubmitVATStatus) failed: %w", err)
+	}
+	response.Steps = append(response.Steps, StepResult{Step: 6, Name: "SubmitVATStatus", Success: true, Message: "VAT status submitted with defaults"})
+
+	// Step 7: Submit SHEBA number
+	shebaReq := &ShebaSubmitRequest{
+		IBAN:      req.ShebaNumber,
+		StartDate: GetCurrentJalaliDate(),
+	}
+	if err := s.SubmitSheba(sess, shebaReq); err != nil {
+		response.Steps = append(response.Steps, StepResult{Step: 7, Name: "SubmitSheba", Success: false, Message: err.Error()})
+		return response, fmt.Errorf("step 7 (SubmitSheba) failed: %w", err)
+	}
+	response.Steps = append(response.Steps, StepResult{Step: 7, Name: "SubmitSheba", Success: true, Message: "SHEBA submitted successfully"})
+
+	// Step 8: Submit members (only for partnership)
+	if req.RegistrationType == "partnership" && len(req.Partners) > 0 {
+		if err := s.submitPartnersWithDefaults(sess, req.Partners); err != nil {
+			response.Steps = append(response.Steps, StepResult{Step: 8, Name: "SubmitPartners", Success: false, Message: err.Error()})
+			return response, fmt.Errorf("step 8 (SubmitPartners) failed: %w", err)
+		}
+		response.Steps = append(response.Steps, StepResult{Step: 8, Name: "SubmitPartners", Success: true, Message: fmt.Sprintf("%d partners submitted", len(req.Partners))})
+	} else {
+		response.Steps = append(response.Steps, StepResult{Step: 8, Name: "SubmitPartners", Success: true, Message: "Skipped (individual registration)"})
+	}
+
+	// Get final status from HomePage
+	homeData, err := s.GetHomePage(sess)
+	if err != nil {
+		s.logger.Warn("Failed to get final status from HomePage", "error", err)
+	} else {
+		response.TrackingCode = homeData.GUID
+	}
+
+	response.Success = true
+	response.Message = "Registration completed successfully"
+
+	s.logger.Info("ExecuteCompleteRegistration: Registration completed",
+		"guid", response.GUID,
+		"trackingCode", response.TrackingCode)
+
+	return response, nil
+}
+
+// submitPublicDataWithDefaults submits the PublicData form with config defaults.
+func (s *Service) submitPublicDataWithDefaults(sess *session.Session, businessName string) error {
+	// Get the form
+	form, err := s.GetPublicDataForm(sess)
+	if err != nil {
+		return fmt.Errorf("failed to get PublicData form: %w", err)
+	}
+
+	defaults := s.cfg.Defaults.BasicInfo
+
+	// Build request with defaults
+	publicData := &PublicDataRequest{
+		RegistrationCause:   defaults.RegistrationReason,
+		IsTejari:            defaults.ActivityType,
+		FinancialStartDate:  GetCurrentJalaliDate(),
+		BusinessName:        businessName,
+		GroupOneType:        defaults.EightCategoryJob,
+		LegalType:           defaults.ProfessionalAssembly,
+		NewLegalGroup:       defaults.GuildUnion,
+		NewLegalType:        defaults.NewGuildUnion,
+		HasJobLicense:       defaults.BusinessLicense,
+		Ownership:           defaults.OwnershipType,
+		FinancialDayStart:   defaults.FinancialDayStart,
+		FinancialMonthStart: defaults.FinancialMonthStart,
+	}
+
+	return s.SubmitPublicData(sess, form, publicData)
+}
+
+// submitINTACodeWithDefaults submits INTA code with config defaults.
+func (s *Service) submitINTACodeWithDefaults(sess *session.Session) error {
+	defaults := s.cfg.Defaults.INTACode
+
+	activity := INTAActivity{
+		Code:        defaults.Code,
+		Description: defaults.Description,
+		Percent:     defaults.Percent,
+	}
+
+	return s.SubmitINTACodes(sess, []INTAActivity{activity})
+}
+
+// submitVATStatusWithDefaults submits VAT status with config defaults.
+func (s *Service) submitVATStatusWithDefaults(sess *session.Session) error {
+	defaults := s.cfg.Defaults.VATStatus
+
+	req := &VATStatusRequest{
+		EligibilityType: defaults.EligibilityType,
+	}
+
+	return s.SubmitVATStatus(sess, req)
+}
+
+// submitPartnersWithDefaults submits partners with config defaults applied.
+func (s *Service) submitPartnersWithDefaults(sess *session.Session, partners []PartnerInput) error {
+	defaults := s.cfg.Defaults.Member
+
+	for i, partner := range partners {
+		s.logger.Info("Submitting partner",
+			"index", i+1,
+			"nationalId", partner.NationalID,
+			"share", partner.SharePercent)
+
+		// Get fresh form for each member
+		form, err := s.GetMembersForm(sess, "")
+		if err != nil {
+			return fmt.Errorf("failed to get members form for partner %d: %w", i+1, err)
+		}
+
+		// Map role to position value
+		position := defaults.Position
+		if partner.Role == "مدیر" {
+			position = "1" // Representative/Manager
+		}
+
+		memberReq := &MemberSubmitRequest{
+			ViewState:          form.ViewState,
+			ViewStateGenerator: form.ViewStateGenerator,
+			EventValidation:    form.EventValidation,
+
+			// Identity
+			PersonType:       defaults.PersonType,
+			Nationality:      defaults.Nationality,
+			NationalID:       partner.NationalID,
+			BirthCountry:     defaults.BirthCountry,
+			NationalCardType: defaults.NationalCardType,
+
+			// Financial
+			MembershipType:     defaults.PartnershipType,
+			IsResponsible:      defaults.IsEmployed,
+			SignatureAuthority: defaults.SignatureAuthority,
+			ResponsibilityType: defaults.ResponsibilityType,
+			SharePercent:       fmt.Sprintf("%d", partner.SharePercent),
+			Position:           position,
+			StartDate:          GetCurrentJalaliDate(),
+			EndDate:            defaults.EndDate,
+		}
+
+		_, err = s.SubmitMember(sess, form, memberReq)
+		if err != nil {
+			return fmt.Errorf("failed to submit partner %d: %w", i+1, err)
+		}
+	}
+
 	return nil
 }

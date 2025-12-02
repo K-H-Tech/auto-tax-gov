@@ -252,3 +252,63 @@ type INTAFormData struct {
 type INTASubmitRequest struct {
 	Activities []INTAActivity `json:"activities"`
 }
+
+// VATStatusFormData contains the ASP.NET form state from VATStatus page.
+type VATStatusFormData struct {
+	ViewState          string `json:"viewState"`
+	ViewStateGenerator string `json:"viewStateGenerator"`
+	EventValidation    string `json:"eventValidation"`
+
+	// Current VAT status selection
+	EligibilityType string `json:"eligibilityType,omitempty"`
+}
+
+// VATStatusRequest contains data for submitting VAT status.
+type VATStatusRequest struct {
+	EligibilityType string `json:"eligibilityType"` // عدم مشمولیت / مشمول
+}
+
+// ShebaFormData contains the ASP.NET form state from AddShebaNumber page.
+type ShebaFormData struct {
+	ViewState          string `json:"viewState"`
+	ViewStateGenerator string `json:"viewStateGenerator"`
+	EventValidation    string `json:"eventValidation"`
+
+	// Existing SHEBA accounts
+	Accounts []BankAccountInfo `json:"accounts,omitempty"`
+}
+
+// ShebaSubmitRequest contains data for submitting a SHEBA number.
+type ShebaSubmitRequest struct {
+	IBAN      string `json:"iban"`      // شماره شبا (24 رقم بدون IR)
+	StartDate string `json:"startDate"` // تاریخ شروع استفاده (Jalali)
+}
+
+// PartnerInput represents partner data from the frontend.
+type PartnerInput struct {
+	NationalID   string `json:"nationalId"`   // کد ملی (10 رقم)
+	SharePercent int    `json:"sharePercent"` // درصد سهم
+	Role         string `json:"role"`         // مدیر/شریک
+}
+
+// CompleteRegistrationRequest is the unified request for automated registration.
+// User provides only essential PII data; all dropdown/selective values are from config.
+type CompleteRegistrationRequest struct {
+	// Essential user inputs (PII)
+	PostalCode       string `json:"postalCode"`       // کد پستی (10 رقم)
+	BusinessName     string `json:"businessName"`     // عنوان واحد/شهرت کسبی
+	RegistrationType string `json:"registrationType"` // "individual" or "partnership"
+	ShebaNumber      string `json:"shebaNumber"`      // شماره شبا (24 رقم بدون IR)
+
+	// Optional: Partners for partnership type
+	Partners []PartnerInput `json:"partners,omitempty"`
+}
+
+// CompleteRegistrationResponse is the response from automated registration.
+type CompleteRegistrationResponse struct {
+	Success      bool         `json:"success"`
+	TrackingCode string       `json:"trackingCode,omitempty"` // کد رهگیری
+	GUID         string       `json:"guid,omitempty"`         // شناسه ثبت‌نام
+	Message      string       `json:"message,omitempty"`
+	Steps        []StepResult `json:"steps,omitempty"`
+}

@@ -4,15 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ورود به سامانه مالیاتی</title>
+    <title>ثبت‌نام مالیاتی خودکار</title>
     <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet"
         type="text/css" />
-    <!-- jQuery (required for persian-datepicker) -->
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <!-- Persian Date Picker -->
-    <link rel="stylesheet" href="https://unpkg.com/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css" />
-    <script src="https://unpkg.com/persian-date@1.1.0/dist/persian-date.min.js"></script>
-    <script src="https://unpkg.com/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
     <style>
         :root {
             --color-bg: #f5f5f5;
@@ -56,3110 +50,1059 @@
             border-radius: var(--radius-lg);
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.05);
             padding: 32px;
-            max-width: 420px;
+            max-width: 480px;
             width: 100%;
-            position: relative;
-            overflow: hidden;
         }
 
-        /* Status Banner */
-        .status {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            padding: 14px 24px;
-            font-size: 14px;
-            font-weight: 500;
-            text-align: center;
-            display: none;
-            animation: slideDown 0.25s ease-out;
-        }
-
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-100%);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .status.loading {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            background: var(--color-loading-bg);
-            color: var(--color-loading);
-            border-bottom: 1px solid #dbeafe;
-        }
-
-        .status.success {
-            display: block;
-            background: var(--color-success-bg);
-            color: var(--color-success);
-            border-bottom: 1px solid #bbf7d0;
-        }
-
-        .status.error {
-            display: block;
-            background: var(--color-error-bg);
-            color: var(--color-error);
-            border-bottom: 1px solid #fecaca;
-        }
-
-        .spinner {
-            width: 16px;
-            height: 16px;
-            border: 2px solid rgba(37, 99, 235, 0.2);
-            border-radius: 50%;
-            border-top-color: var(--color-loading);
-            animation: spin 0.7s linear infinite;
-        }
-
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
-        }
-
-        /* Header */
-        .header {
-            text-align: center;
-            margin-bottom: 32px;
-            padding-top: 8px;
-        }
-
-        .header h1 {
+        h1 {
             color: var(--color-text);
-            font-size: 22px;
+            font-size: 24px;
             font-weight: 700;
+            text-align: center;
             margin-bottom: 8px;
         }
 
-        .header p {
+        .subtitle {
             color: var(--color-text-secondary);
             font-size: 14px;
-            font-weight: 400;
+            text-align: center;
+            margin-bottom: 24px;
         }
 
-        /* Form Groups */
+        /* Phase indicator */
+        .phase-indicator {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .phase {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: var(--radius-sm);
+            background: #f3f4f6;
+            color: #9ca3af;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .phase.active {
+            background: var(--color-loading-bg);
+            color: var(--color-loading);
+        }
+
+        .phase.completed {
+            background: var(--color-success-bg);
+            color: var(--color-success);
+        }
+
+        .phase-number {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
+            background: currentColor;
+            color: white;
+        }
+
+        .phase.active .phase-number,
+        .phase.completed .phase-number {
+            background: currentColor;
+        }
+
+        /* Form elements */
         .form-group {
             margin-bottom: 20px;
         }
 
-        .form-group label {
+        label {
             display: block;
-            margin-bottom: 8px;
             color: var(--color-text);
-            font-weight: 500;
-            font-size: 13px;
-        }
-
-        .form-group input {
-            width: 100%;
-            height: 48px;
-            padding: 0 16px;
-            border: 1px solid var(--color-border);
-            border-radius: var(--radius-md);
-            font-family: inherit;
-            font-size: 15px;
-            color: var(--color-text);
-            background: var(--color-surface);
-            transition: border-color 0.15s ease, box-shadow 0.15s ease;
-            direction: ltr;
-            text-align: left;
-        }
-
-        .form-group input::placeholder {
-            color: #999;
-        }
-
-        .form-group input:focus {
-            outline: none;
-            border-color: var(--color-border-focus);
-            box-shadow: 0 0 0 3px rgba(26, 26, 26, 0.06);
-        }
-
-        .form-group .hint {
-            color: var(--color-text-secondary);
-            font-size: 12px;
-            margin-top: 8px;
-        }
-
-        /* Captcha Container */
-        .captcha-container {
-            background: #fafafa;
-            border-radius: var(--radius-md);
-            border: 1px solid var(--color-border);
-            padding: 20px;
-            margin-bottom: 24px;
-        }
-
-        .captcha-container label {
-            display: block;
-            margin-bottom: 12px;
-            color: var(--color-text);
-            font-weight: 500;
-            font-size: 13px;
-            text-align: center;
-        }
-
-        .captcha-image-wrapper {
-            background: var(--color-surface);
-            border-radius: var(--radius-sm);
-            padding: 16px;
-            display: flex;
-            justify-content: center;
-            margin-bottom: 16px;
-            border: 1px solid var(--color-border);
-        }
-
-        #captchaImage {
-            max-width: 100%;
-            height: auto;
-            display: block;
-            border-radius: 4px;
-        }
-
-        .captcha-placeholder {
-            width: 200px;
-            height: 50px;
-            background: #f0f0f0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--color-text-secondary);
-            font-size: 13px;
-            border-radius: 4px;
-        }
-
-        .captcha-input-wrapper {
-            display: flex;
-            gap: 12px;
-            align-items: stretch;
-        }
-
-        .captcha-input-wrapper input {
-            flex: 1;
-            height: 48px;
-            padding: 0 16px;
-            border: 1px solid var(--color-border);
-            border-radius: var(--radius-md);
-            font-family: inherit;
-            font-size: 15px;
-            color: var(--color-text);
-            background: var(--color-surface);
-            transition: border-color 0.15s ease, box-shadow 0.15s ease;
-            direction: ltr;
-            text-align: center;
-            letter-spacing: 2px;
-        }
-
-        .captcha-input-wrapper input::placeholder {
-            color: #999;
-            letter-spacing: normal;
-        }
-
-        .captcha-input-wrapper input:focus {
-            outline: none;
-            border-color: var(--color-border-focus);
-            box-shadow: 0 0 0 3px rgba(26, 26, 26, 0.06);
-        }
-
-        /* Refresh Button (Secondary) */
-        .refresh-btn {
-            height: 48px;
-            padding: 0 20px;
-            background: var(--color-surface);
-            color: var(--color-text-secondary);
-            border: 1px solid #ddd;
-            border-radius: var(--radius-md);
-            font-family: inherit;
             font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.15s ease;
-            white-space: nowrap;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 14px 16px;
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-md);
+            font-size: 15px;
+            font-family: inherit;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            background: white;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--color-border-focus);
+            box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
+        }
+
+        input::placeholder {
+            color: #a0a0a0;
+        }
+
+        /* Captcha */
+        .captcha-container {
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .captcha-image {
+            flex: 1;
+            background: #f8f8f8;
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-md);
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .captcha-image img {
+            max-width: 100%;
+            max-height: 60px;
+        }
+
+        .refresh-btn {
+            width: 44px;
+            height: 44px;
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-md);
+            background: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
         }
 
         .refresh-btn:hover {
-            background: #f5f5f5;
-            border-color: #ccc;
+            background: #f3f4f6;
         }
 
-        .refresh-btn:active {
-            background: #eee;
-        }
-
-        .captcha-info {
-            margin-top: 12px;
-            padding: 10px 12px;
-            background: var(--color-surface);
-            border-radius: var(--radius-sm);
-            font-size: 11px;
-            color: var(--color-text-secondary);
-            text-align: center;
-            border: 1px solid var(--color-border);
-        }
-
-        .captcha-info strong {
-            color: var(--color-text);
-            font-weight: 500;
-        }
-
-        /* Select Dropdown */
-        .form-group select {
-            width: 100%;
-            height: 48px;
-            padding: 0 16px;
-            border: 1px solid var(--color-border);
-            border-radius: var(--radius-md);
-            font-family: inherit;
-            font-size: 15px;
-            color: var(--color-text);
-            background: var(--color-surface);
-            cursor: pointer;
-            appearance: none;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: left 16px center;
-            transition: border-color 0.15s ease, box-shadow 0.15s ease;
-        }
-
-        .form-group select:focus {
-            outline: none;
-            border-color: var(--color-border-focus);
-            box-shadow: 0 0 0 3px rgba(26, 26, 26, 0.06);
-        }
-
-        .form-group select:invalid {
-            color: #999;
-        }
-
-        /* Primary Button */
-        .btn-primary {
-            width: 100%;
-            height: 48px;
-            background: var(--color-primary);
-            color: var(--color-surface);
-            border: none;
-            border-radius: var(--radius-md);
-            font-family: inherit;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background-color 0.15s ease, transform 0.1s ease;
-        }
-
-        .btn-primary:hover {
-            background: var(--color-primary-hover);
-        }
-
-        .btn-primary:active {
-            transform: scale(0.98);
-        }
-
-        .btn-primary:disabled {
-            background: #ccc;
+        .refresh-btn:disabled {
+            opacity: 0.5;
             cursor: not-allowed;
-            transform: none;
         }
 
-        /* Delete Registration Section */
-        .delete-registration-card {
-            background: #fef2f2;
-            border: 1px solid #fecaca;
-            border-radius: var(--radius-md);
-            padding: 20px;
-            margin-top: 20px;
-            text-align: center;
-        }
-
-        .delete-registration-card .warning-icon {
-            font-size: 32px;
-            margin-bottom: 12px;
-        }
-
-        .delete-registration-card .warning-title {
-            color: #991b1b;
-            font-weight: 600;
-            font-size: 15px;
-            margin-bottom: 8px;
-        }
-
-        .delete-registration-card .warning-text {
-            color: #dc2626;
-            font-size: 13px;
-            margin-bottom: 16px;
-            line-height: 1.6;
-        }
-
-        .btn-delete {
+        /* Buttons */
+        .btn {
             width: 100%;
-            height: 44px;
-            background: #dc2626;
-            color: white;
+            padding: 14px 24px;
             border: none;
             border-radius: var(--radius-md);
-            font-family: inherit;
-            font-size: 14px;
+            font-size: 15px;
             font-weight: 600;
+            font-family: inherit;
             cursor: pointer;
-            transition: background-color 0.15s ease, transform 0.1s ease;
+            transition: all 0.2s;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 8px;
         }
 
-        .btn-delete:hover {
-            background: #b91c1c;
+        .btn-primary {
+            background: var(--color-primary);
+            color: white;
         }
 
-        .btn-delete:active {
-            transform: scale(0.98);
+        .btn-primary:hover:not(:disabled) {
+            background: var(--color-primary-hover);
         }
 
-        .btn-delete:disabled {
-            background: #f87171;
+        .btn-primary:disabled {
+            background: #ccc;
             cursor: not-allowed;
-            transform: none;
-        }
-
-        /* OTP Input Container */
-        .otp-container {
-            display: flex;
-            justify-content: center;
-            gap: 12px;
-            direction: ltr;
-            margin-top: 8px;
-        }
-
-        .otp-input {
-            width: 52px;
-            height: 56px;
-            border: 1px solid var(--color-border);
-            border-radius: var(--radius-md);
-            font-family: inherit;
-            font-size: 24px;
-            font-weight: 600;
-            color: var(--color-text);
-            background: var(--color-surface);
-            text-align: center;
-            line-height: 56px;
-            padding: 0;
-            vertical-align: middle;
-            transition: border-color 0.15s ease, box-shadow 0.15s ease;
-        }
-
-        .otp-input:focus {
-            outline: none;
-            border-color: var(--color-border-focus);
-            box-shadow: 0 0 0 3px rgba(26, 26, 26, 0.08);
-        }
-
-        .otp-input.filled {
-            border-color: var(--color-border-focus);
-            background: #fafafa;
-        }
-
-        .otp-input.error {
-            border-color: var(--color-error);
-            box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
-        }
-
-        /* Progress Tracker Container */
-        .progress-tracker {
-            margin-top: 24px;
-            border: 1px solid var(--color-border);
-            border-radius: var(--radius-md);
-            background: #fafafa;
-            overflow: hidden;
-        }
-
-        .progress-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 16px;
-            background: var(--color-surface);
-            border-bottom: 1px solid var(--color-border);
-            cursor: pointer;
-            user-select: none;
-        }
-
-        .progress-title {
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--color-text);
-        }
-
-        .progress-toggle {
-            font-size: 12px;
-            color: var(--color-text-secondary);
-            transition: transform 0.2s;
-        }
-
-        .progress-tracker.collapsed .progress-toggle {
-            transform: rotate(-90deg);
-        }
-
-        .progress-tracker.collapsed .progress-steps {
-            display: none;
-        }
-
-        .progress-steps {
-            padding: 12px;
-        }
-
-        /* Individual Step */
-        .step {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 10px 12px;
-            border-radius: var(--radius-sm);
-            margin-bottom: 4px;
-            background: var(--color-surface);
-            border: 1px solid transparent;
-            transition: all 0.2s;
-        }
-
-        .step:last-child {
-            margin-bottom: 0;
-        }
-
-        .step[data-status="pending"] {
-            opacity: 0.5;
-        }
-
-        .step[data-status="active"] {
-            border-color: var(--color-loading);
-            background: var(--color-loading-bg);
-        }
-
-        .step[data-status="completed"] {
-            border-color: var(--color-success);
-            background: var(--color-success-bg);
-        }
-
-        .step[data-status="error"] {
-            border-color: var(--color-error);
-            background: var(--color-error-bg);
-        }
-
-        /* Step Indicator (number circle) */
-        .step-indicator {
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 13px;
-            font-weight: 600;
-            background: var(--color-border);
-            color: var(--color-text-secondary);
-            flex-shrink: 0;
-        }
-
-        .step[data-status="active"] .step-indicator {
-            background: var(--color-loading);
-            color: white;
-        }
-
-        .step[data-status="completed"] .step-indicator {
-            background: var(--color-success);
-            color: white;
-        }
-
-        .step[data-status="error"] .step-indicator {
-            background: var(--color-error);
-            color: white;
-        }
-
-        /* Step Content */
-        .step-content {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-        }
-
-        .step-label {
-            font-size: 13px;
-            font-weight: 500;
-            color: var(--color-text);
-        }
-
-        .step-time {
-            font-size: 11px;
-            color: var(--color-text-secondary);
-            direction: ltr;
-            text-align: right;
-        }
-
-        /* Step Status Icon */
-        .step-status {
-            width: 20px;
-            height: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .step-status .check {
-            color: var(--color-success);
-            font-size: 16px;
-        }
-
-        .step-status .error-icon {
-            color: var(--color-error);
-            font-size: 16px;
-        }
-
-        .step-status .spinner-small {
-            width: 16px;
-            height: 16px;
-            border: 2px solid rgba(37, 99, 235, 0.2);
-            border-radius: 50%;
-            border-top-color: var(--color-loading);
-            animation: spin 0.7s linear infinite;
-        }
-
-        /* Error Log */
-        .step-error {
-            margin: -4px 12px 8px 52px;
-            padding: 8px 12px;
-            background: var(--color-error-bg);
-            border-radius: var(--radius-sm);
-            border: 1px solid #fecaca;
-        }
-
-        .step-error .error-text {
-            font-size: 11px;
-            color: var(--color-error);
-            direction: ltr;
-            display: block;
-            word-break: break-word;
-        }
-
-        /* Divider */
-        .divider {
-            height: 1px;
-            background: var(--color-border);
-            margin: 24px 0;
-        }
-
-        /* Help Panel (Warning) */
-        .help-panel {
-            background: #fffbeb;
-            border: 1px solid #fbbf24;
-            border-radius: var(--radius-md);
-            padding: 20px;
-            margin-bottom: 20px;
-        }
-
-        .help-header {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 16px;
-        }
-
-        .help-header h3 {
-            color: #92400e;
-            font-size: 16px;
-            margin: 0;
-        }
-
-        .help-icon {
-            font-size: 24px;
-        }
-
-        .help-content p {
-            color: #78350f;
-            margin-bottom: 16px;
-            line-height: 1.7;
-        }
-
-        .help-content h4 {
-            color: #92400e;
-            font-size: 14px;
-            margin-bottom: 12px;
-        }
-
-        .help-content ol {
-            padding-right: 20px;
-            margin-bottom: 20px;
-        }
-
-        .help-content li {
-            color: #78350f;
-            margin-bottom: 8px;
-            line-height: 1.6;
-        }
-
-        .help-content a {
-            color: #d97706;
-            text-decoration: underline;
-        }
-
-        .help-actions {
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
         }
 
         .btn-secondary {
-            background: #f59e0b;
-            color: white;
-            padding: 10px 20px;
-            border-radius: var(--radius-md);
-            text-decoration: none;
-            font-weight: 500;
-            font-size: 14px;
-            display: inline-block;
+            background: white;
+            color: var(--color-text);
+            border: 1px solid var(--color-border);
         }
 
         .btn-secondary:hover {
-            background: #d97706;
+            background: #f3f4f6;
         }
 
-        .btn-text {
-            background: transparent;
-            border: none;
-            color: #92400e;
-            cursor: pointer;
+        /* Alerts */
+        .alert {
+            padding: 14px 16px;
+            border-radius: var(--radius-md);
             font-size: 14px;
-            padding: 10px;
-            font-family: inherit;
+            margin-bottom: 20px;
+            display: none;
         }
 
-        .btn-text:hover {
-            text-decoration: underline;
+        .alert.show {
+            display: block;
         }
 
-        /* Partner/Account Card Styles */
-        .card-list {
+        .alert-error {
+            background: var(--color-error-bg);
+            color: var(--color-error);
+            border: 1px solid rgba(220, 38, 38, 0.2);
+        }
+
+        .alert-success {
+            background: var(--color-success-bg);
+            color: var(--color-success);
+            border: 1px solid rgba(22, 163, 74, 0.2);
+        }
+
+        .alert-info {
+            background: var(--color-loading-bg);
+            color: var(--color-loading);
+            border: 1px solid rgba(37, 99, 235, 0.2);
+        }
+
+        /* Panels */
+        .panel {
+            display: none;
+        }
+
+        .panel.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Registration type toggle */
+        .type-toggle {
+            display: flex;
+            gap: 12px;
             margin-bottom: 20px;
         }
 
-        .partner-card,
-        .account-card {
-            background: #fafafa;
-            border: 1px solid var(--color-border);
-            border-radius: var(--radius-md);
+        .type-option {
+            flex: 1;
             padding: 16px;
-            margin-bottom: 12px;
-            position: relative;
+            border: 2px solid var(--color-border);
+            border-radius: var(--radius-md);
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
         }
 
-        .card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
+        .type-option:hover {
+            border-color: var(--color-text-secondary);
         }
 
-        .card-title {
+        .type-option.selected {
+            border-color: var(--color-primary);
+            background: #f8f8f8;
+        }
+
+        .type-option-title {
             font-size: 14px;
             font-weight: 600;
             color: var(--color-text);
+            margin-bottom: 4px;
         }
 
-        .btn-remove {
-            background: var(--color-error-bg);
-            color: var(--color-error);
-            border: 1px solid #fecaca;
-            border-radius: var(--radius-sm);
-            padding: 6px 12px;
+        .type-option-desc {
             font-size: 12px;
-            font-family: inherit;
-            cursor: pointer;
+            color: var(--color-text-secondary);
         }
 
-        .btn-remove:hover {
-            background: #fee2e2;
+        /* Partners table */
+        .partners-section {
+            display: none;
+            margin-bottom: 20px;
         }
 
-        .card-row {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 12px;
+        .partners-section.show {
+            display: block;
         }
 
-        .card-row .form-group {
-            flex: 1;
-            margin-bottom: 0;
-        }
-
-        .card-row .form-group.small {
-            flex: 0 0 100px;
-        }
-
-        .btn-add {
+        .partners-table {
             width: 100%;
-            padding: 12px;
-            background: var(--color-success-bg);
-            color: var(--color-success);
-            border: 1px dashed var(--color-success);
-            border-radius: var(--radius-md);
-            font-size: 14px;
-            font-family: inherit;
-            font-weight: 500;
-            cursor: pointer;
-            margin-bottom: 20px;
-        }
-
-        .btn-add:hover {
-            background: #dcfce7;
-        }
-
-        .share-total {
-            text-align: center;
-            padding: 10px;
-            background: var(--color-loading-bg);
-            border-radius: var(--radius-sm);
-            margin-bottom: 20px;
-            font-size: 14px;
-            color: var(--color-loading);
-        }
-
-        .share-total.error {
-            background: var(--color-error-bg);
-            color: var(--color-error);
-        }
-
-        .share-total.success {
-            background: var(--color-success-bg);
-            color: var(--color-success);
-        }
-
-        .iban-input {
-            direction: ltr !important;
-            text-align: left !important;
-            font-family: monospace;
-            letter-spacing: 1px;
-        }
-
-        .skip-section {
-            background: #f0fdf4;
-            border: 1px solid #86efac;
-            border-radius: var(--radius-md);
-            padding: 16px;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-
-        .skip-section p {
-            color: #166534;
+            border-collapse: collapse;
             margin-bottom: 12px;
-            font-size: 14px;
         }
 
-        .btn-skip {
-            background: var(--color-success);
+        .partners-table th,
+        .partners-table td {
+            padding: 10px;
+            border: 1px solid var(--color-border);
+            text-align: center;
+            font-size: 13px;
+        }
+
+        .partners-table th {
+            background: #f8f8f8;
+            font-weight: 600;
+        }
+
+        .partners-table input {
+            padding: 8px;
+            font-size: 13px;
+        }
+
+        .partners-table select {
+            padding: 8px;
+            font-size: 13px;
+        }
+
+        .add-partner-btn {
+            padding: 8px 16px;
+            font-size: 13px;
+            width: auto;
+        }
+
+        .remove-partner-btn {
+            background: var(--color-error);
             color: white;
             border: none;
-            border-radius: var(--radius-md);
-            padding: 10px 24px;
-            font-size: 14px;
-            font-family: inherit;
-            font-weight: 500;
+            padding: 6px 12px;
+            border-radius: var(--radius-sm);
             cursor: pointer;
+            font-size: 12px;
         }
 
-        .btn-skip:hover {
-            background: #15803d;
+        /* Progress indicator */
+        .progress-container {
+            margin-bottom: 20px;
         }
 
-        /* Responsive */
-        @media (max-width: 480px) {
-            body {
-                padding: 16px;
-            }
-
-            .container {
-                padding: 24px;
-            }
-
-            .header h1 {
-                font-size: 20px;
-            }
-
-            .captcha-input-wrapper {
-                flex-direction: column;
-            }
-
-            .refresh-btn {
-                width: 100%;
-                justify-content: center;
-            }
-
-            .otp-container {
-                gap: 8px;
-            }
-
-            .otp-input {
-                width: 48px;
-                height: 52px;
-                font-size: 22px;
-            }
-
-            .step {
-                padding: 8px 10px;
-            }
-
-            .step-indicator {
-                width: 24px;
-                height: 24px;
-                font-size: 12px;
-            }
-
-            .step-label {
-                font-size: 12px;
-            }
-
-            .step-error {
-                margin-left: 46px;
-            }
+        .progress-bar {
+            height: 6px;
+            background: #e5e5e5;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 12px;
         }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--color-loading);
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        .progress-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .progress-step {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--color-text-secondary);
+        }
+
+        .progress-step.active {
+            color: var(--color-loading);
+            font-weight: 500;
+        }
+
+        .progress-step.completed {
+            color: var(--color-success);
+        }
+
+        .progress-step-icon {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            background: #e5e5e5;
+            color: white;
+        }
+
+        .progress-step.active .progress-step-icon {
+            background: var(--color-loading);
+        }
+
+        .progress-step.completed .progress-step-icon {
+            background: var(--color-success);
+        }
+
+        /* Result card */
+        .result-card {
+            text-align: center;
+            padding: 24px;
+        }
+
+        .result-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            margin: 0 auto 16px;
+        }
+
+        .result-icon.success {
+            background: var(--color-success-bg);
+            color: var(--color-success);
+        }
+
+        .result-icon.error {
+            background: var(--color-error-bg);
+            color: var(--color-error);
+        }
+
+        .result-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .result-tracking {
+            background: #f8f8f8;
+            padding: 16px;
+            border-radius: var(--radius-md);
+            margin: 16px 0;
+        }
+
+        .result-tracking-label {
+            font-size: 12px;
+            color: var(--color-text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .result-tracking-code {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--color-text);
+            font-family: monospace;
+        }
+
+        /* Spinner */
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid currentColor;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Helpers */
+        .text-muted {
+            color: var(--color-text-secondary);
+            font-size: 13px;
+        }
+
+        .mt-3 { margin-top: 16px; }
+        .mb-3 { margin-bottom: 16px; }
     </style>
 </head>
 
 <body>
     <div class="container">
-        <div class="status" id="status" role="alert" aria-live="polite" aria-atomic="true"></div>
+        <h1>ثبت‌نام مالیاتی خودکار</h1>
+        <p class="subtitle">ابتدا وارد شوید، سپس اطلاعات را وارد کنید</p>
 
-        <div class="header">
-            <h1>ورود به سامانه مالیاتی</h1>
-            <p>لطفاً اطلاعات خود را وارد کنید</p>
+        <!-- Phase indicator -->
+        <div class="phase-indicator">
+            <div class="phase active" id="phase1">
+                <span class="phase-number">۱</span>
+                <span>ورود</span>
+            </div>
+            <div class="phase" id="phase2">
+                <span class="phase-number">۲</span>
+                <span>ثبت‌نام</span>
+            </div>
         </div>
 
-        <form id="loginForm">
-            <div class="form-group">
-                <label for="mobile">شماره موبایل</label>
-                <input type="tel" value="09364646448" id="mobile" name="mobile" placeholder="09123456789"
-                    pattern="09[0-9]{9}" autocomplete="tel" required>
-            </div>
+        <!-- Alert messages -->
+        <div id="alert" class="alert"></div>
 
-            <div class="captcha-container">
-                <label>کد امنیتی</label>
-                <div class="captcha-image-wrapper">
-                    <img id="captchaImage" style="display: none;" alt="کد امنیتی">
-                    <div id="captchaPlaceholder" class="captcha-placeholder">
-                        در حال بارگذاری...
+        <!-- Panel 1: Login -->
+        <div id="loginPanel" class="panel active">
+            <!-- Step 1: Captcha -->
+            <div id="captchaStep">
+                <div class="captcha-container">
+                    <div class="captcha-image" id="captchaImage">
+                        <span class="text-muted">در حال بارگذاری...</span>
                     </div>
-                </div>
-
-                <div class="captcha-input-wrapper">
-                    <input type="text" id="captchaCode" name="captchaCode" placeholder="کد را وارد کنید" maxlength="6"
-                        autocomplete="off" required>
-                    <button type="button" class="refresh-btn" id="refreshCaptcha">
-                        <span>تازه‌سازی</span>
+                    <button class="refresh-btn" id="refreshCaptcha" onclick="refreshCaptcha()" title="کپچای جدید">
+                        ↻
                     </button>
                 </div>
 
+                <div class="form-group">
+                    <label for="captchaCode">کد کپچا</label>
+                    <input type="text" id="captchaCode" placeholder="کد تصویر را وارد کنید" autocomplete="off">
+                </div>
+
+                <div class="form-group">
+                    <label for="mobile">شماره موبایل</label>
+                    <input type="tel" id="mobile" placeholder="۰۹۱۲۳۴۵۶۷۸۹" dir="ltr" style="text-align: right;">
+                </div>
+
+                <button class="btn btn-primary" id="sendOtpBtn" onclick="sendOTP()">
+                    ارسال کد تایید
+                </button>
             </div>
 
-            <button type="submit" class="btn-primary" id="loginBtn">ارسال کد تأیید</button>
-        </form>
-
-        <form id="otpForm" style="display: none;">
-            <div class="form-group">
-                <label id="otpLabel">کد تأیید</label>
-                <div class="otp-container" role="group" aria-labelledby="otpLabel">
-                    <input type="text" class="otp-input" data-index="0" maxlength="1" inputmode="numeric"
-                        pattern="[0-9]" autocomplete="one-time-code" aria-label="رقم اول" required>
-                    <input type="text" class="otp-input" data-index="1" maxlength="1" inputmode="numeric"
-                        pattern="[0-9]" aria-label="رقم دوم" required>
-                    <input type="text" class="otp-input" data-index="2" maxlength="1" inputmode="numeric"
-                        pattern="[0-9]" aria-label="رقم سوم" required>
-                    <input type="text" class="otp-input" data-index="3" maxlength="1" inputmode="numeric"
-                        pattern="[0-9]" aria-label="رقم چهارم" required>
-                    <input type="text" class="otp-input" data-index="4" maxlength="1" inputmode="numeric"
-                        pattern="[0-9]" aria-label="رقم پنجم" required>
+            <!-- Step 2: OTP -->
+            <div id="otpStep" style="display: none;">
+                <div class="form-group">
+                    <label for="otpCode">کد تایید پیامکی</label>
+                    <input type="text" id="otpCode" placeholder="کد ۶ رقمی" maxlength="6" dir="ltr" style="text-align: center; font-size: 24px; letter-spacing: 8px;">
                 </div>
-                <p class="hint">
-                    کد تأیید به شماره <strong id="sentMobile"></strong> ارسال شد
+
+                <p class="text-muted mb-3" style="text-align: center;">
+                    کد تایید به شماره <span id="displayMobile"></span> ارسال شد
                 </p>
+
+                <button class="btn btn-primary" id="verifyOtpBtn" onclick="verifyOTP()">
+                    تایید و ورود
+                </button>
+
+                <button class="btn btn-secondary mt-3" onclick="backToCaptcha()">
+                    بازگشت
+                </button>
             </div>
-
-            <button type="submit" class="btn-primary" id="otpBtn">ورود به سامانه</button>
-        </form>
-
-        <div id="dashboardSection" style="display: none;">
-            <button type="button" class="btn-primary" id="dashboardBtn">دسترسی به داشبورد</button>
         </div>
 
-        <div id="taxFileSection" style="display: none;">
-            <!-- Help panel for incomplete registrations error -->
-            <div id="incompleteRegHelp" class="help-panel" style="display: none;">
-                <div class="help-header">
-                    <span class="help-icon">⚠️</span>
-                    <h3>پرونده‌های ناتمام یافت شد</h3>
-                </div>
-                <div class="help-content">
-                    <p>شما پرونده‌های مالیاتی ناتمامی دارید که باید قبل از ایجاد پرونده جدید تکمیل یا غیرفعال شوند.</p>
+        <!-- Panel 2: Registration Form -->
+        <div id="registrationPanel" class="panel">
+            <div class="form-group">
+                <label for="postalCode">کد پستی (۱۰ رقم)</label>
+                <input type="text" id="postalCode" placeholder="۱۲۳۴۵۶۷۸۹۰" maxlength="10" dir="ltr" style="text-align: right;">
+            </div>
 
-                    <h4>مراحل رفع مشکل:</h4>
-                    <ol>
-                        <li>وارد سامانه <a href="https://my.tax.gov.ir" target="_blank">my.tax.gov.ir</a> شوید</li>
-                        <li>به بخش «پرونده‌های مالیاتی» یا «ثبت‌نام‌های من» بروید</li>
-                        <li>پرونده‌های ناتمام (قبل از گام ۴) را پیدا کنید</li>
-                        <li>هر پرونده را یا <strong>تکمیل</strong> کنید یا <strong>غیرفعال</strong> کنید</li>
-                        <li>پس از اتمام، به اینجا برگردید و دوباره تلاش کنید</li>
-                    </ol>
+            <div class="form-group">
+                <label for="businessName">عنوان واحد / شهرت کسبی</label>
+                <input type="text" id="businessName" placeholder="نام کسب‌وکار">
+            </div>
 
-                    <div class="help-actions">
-                        <a href="https://my.tax.gov.ir" target="_blank" class="btn-secondary">
-                            رفتن به سامانه مالیاتی
-                        </a>
-                        <button type="button" class="btn-text" onclick="hideIncompleteRegistrationHelp()">
-                            بستن راهنما
-                        </button>
+            <div class="form-group">
+                <label>نوع ثبت‌نام</label>
+                <div class="type-toggle">
+                    <div class="type-option selected" onclick="selectType('individual')">
+                        <div class="type-option-title">انفرادی</div>
+                        <div class="type-option-desc">یک نفره</div>
                     </div>
-                </div>
-            </div>
-
-            <form id="taxFileForm">
-                <div class="form-group">
-                    <label for="postalCode">کد پستی</label>
-                    <input type="text" id="postalCode" name="postalCode" placeholder="کد پستی ۱۰ رقمی" maxlength="10"
-                        inputmode="numeric" pattern="[0-9]{10}" required style="direction: ltr; text-align: left;">
-                </div>
-
-                <div class="form-group">
-                    <label for="businessName">نام کسب و کار</label>
-                    <input type="text" id="businessName" name="businessName"
-                        placeholder="نام کسب و کار خود را وارد کنید" required
-                        style="direction: rtl; text-align: right;">
-                </div>
-
-                <div class="form-group">
-                    <label for="regType">نوع ثبت‌نام</label>
-                    <select id="regType" name="regType" required>
-                        <option value="" disabled selected>انتخاب کنید...</option>
-                        <option value="Single">حقیقی (فردی)</option>
-                        <option value="Company">حقوقی (شرکت)</option>
-                    </select>
-                </div>
-
-                <button type="submit" class="btn-primary" id="taxFileBtn">شروع پرونده مالیاتی</button>
-            </form>
-
-            <!-- Delete Registration Section - dynamically populated by fetchIncompleteRegistrations() -->
-            <div id="deleteRegistrationSection" class="delete-registration-card" style="display: none;">
-                <!-- Content is dynamically populated -->
-            </div>
-        </div>
-
-        <div id="basicInfoSection" style="display: none;">
-            <div class="header" style="margin-bottom: 24px;">
-                <h1>اطلاعات پایه ثبت‌نام</h1>
-                <p>لطفاً اطلاعات کسب‌وکار خود را تکمیل کنید</p>
-            </div>
-            <form id="basicInfoForm">
-                <div class="form-group">
-                    <label for="registrationReason">دلیل ثبت‌نام <span
-                            style="color: var(--color-error);">*</span></label>
-                    <select id="registrationReason" name="registrationReason" required>
-                        <option value="" disabled selected>انتخاب کنید...</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="activityType">نوع فعالیت <span style="color: var(--color-error);">*</span></label>
-                    <select id="activityType" name="activityType" required>
-                        <option value="" disabled selected>انتخاب کنید...</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="startDate">تاریخ شروع فعالیت <span style="color: var(--color-error);">*</span></label>
-                    <input type="text" id="startDate" name="startDate" placeholder="برای انتخاب تاریخ کلیک کنید"
-                        required readonly style="direction: ltr; text-align: left; cursor: pointer;">
-                    <p class="hint">روی فیلد کلیک کنید تا تقویم شمسی باز شود</p>
-                </div>
-
-                <div class="form-group">
-                    <label for="unitTitle">عنوان واحد <span style="color: var(--color-error);">*</span></label>
-                    <input type="text" id="unitTitle" name="unitTitle" placeholder="نام کسب‌وکار یا درگاه پرداخت"
-                        required style="direction: rtl; text-align: right;">
-                </div>
-
-                <div class="form-group">
-                    <label for="eightCategoryJob">مشاغل هشتگانه <span
-                            style="color: var(--color-error);">*</span></label>
-                    <select id="eightCategoryJob" name="eightCategoryJob" required>
-                        <option value="" disabled selected>انتخاب کنید...</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="individualJob">مشاغل انفرادی <span style="color: var(--color-error);">*</span></label>
-                    <select id="individualJob" name="individualJob" required>
-                        <option value="" disabled selected>انتخاب کنید...</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="professionalGuild">مجامع صنفی <span style="color: var(--color-error);">*</span></label>
-                    <select id="professionalGuild" name="professionalGuild" required>
-                        <option value="" disabled selected>انتخاب کنید...</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="professionalAssembly">مجامع صنفی (انتخاب) <span
-                            style="color: var(--color-error);">*</span></label>
-                    <select id="professionalAssembly" name="professionalAssembly" required>
-                        <option value="" disabled selected>انتخاب کنید...</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="guildUnion">اتحادیه صنفی <span style="color: var(--color-error);">*</span></label>
-                    <select id="guildUnion" name="guildUnion" required>
-                        <option value="" disabled selected>انتخاب کنید...</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="businessLicense">پروانه کسب <span style="color: var(--color-error);">*</span></label>
-                    <select id="businessLicense" name="businessLicense" required>
-                        <option value="" disabled selected>انتخاب کنید...</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="ownershipType">نوع مالکیت <span style="color: var(--color-error);">*</span></label>
-                    <select id="ownershipType" name="ownershipType" required>
-                        <option value="" disabled selected>انتخاب کنید...</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="website">پایگاه اینترنتی (اختیاری)</label>
-                    <input type="text" id="website" name="website" placeholder="https://example.com"
-                        style="direction: ltr; text-align: left;">
-                    <p class="hint">آدرس وبسایت کسب‌وکار شما (اختیاری)</p>
-                </div>
-
-                <button type="submit" class="btn-primary" id="basicInfoBtn">ثبت اطلاعات پایه</button>
-            </form>
-        </div>
-
-        <!-- Step 3: Partners Section (شرکا و اعضا) -->
-        <div id="partnersSection" style="display: none;">
-            <div class="header" style="margin-bottom: 24px;">
-                <h1>شرکا و اعضا</h1>
-                <p>اطلاعات شرکا و سهامداران کسب‌وکار</p>
-            </div>
-
-            <!-- Skip option for individual businesses -->
-            <div class="skip-section" id="skipPartnersSection" style="display: none;">
-                <p>برای کسب‌وکارهای فردی (حقیقی)، این مرحله اختیاری است.</p>
-                <button type="button" class="btn-skip" onclick="skipToAccounts()">رد شدن به مرحله بعد</button>
-            </div>
-
-            <div id="partnersFormContainer">
-                <div class="card-list" id="partnersList">
-                    <!-- Partner cards will be added here dynamically -->
-                </div>
-
-                <button type="button" class="btn-add" onclick="addPartner()">
-                    + افزودن شریک جدید
-                </button>
-
-                <div class="share-total" id="shareTotal">
-                    مجموع سهام: <strong id="shareTotalValue">۰</strong>٪ (باید ۱۰۰٪ باشد)
-                </div>
-
-                <button type="button" class="btn-primary" id="partnersBtn" onclick="submitPartners()">
-                    ثبت شرکا و ادامه
-                </button>
-            </div>
-        </div>
-
-        <!-- Step 5: INTA Code Section (اینتاکد فعالیت) -->
-        <div id="intaCodeSection" style="display: none;">
-            <div class="header" style="margin-bottom: 24px;">
-                <h1>اینتاکد فعالیت</h1>
-                <p>کد استاندارد فعالیت اقتصادی (مجموع درصدها باید ۱۰۰٪ باشد)</p>
-            </div>
-
-            <!-- Search Section -->
-            <div class="help-panel" style="background: #f0f9ff; border-color: #0ea5e9; margin-bottom: 24px;">
-                <div class="help-header">
-                    <span class="help-icon">🔍</span>
-                    <h3 style="color: #0369a1;">جستجوی کد فعالیت</h3>
-                </div>
-                <div class="help-content">
-                    <div style="margin-bottom: 12px;">
-                        <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #374151;">جستجو در
-                            عناوین کدها</label>
-                        <div style="display: flex; gap: 8px; align-items: center;">
-                            <input type="text" id="intaSearchKeyword" placeholder="حداقل ۳ حرف وارد کنید..."
-                                style="flex: 1; width: auto; min-width: 0; height: 40px; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; font-family: inherit; box-sizing: border-box;"
-                                onkeypress="if(event.key==='Enter'){searchINTACodes();event.preventDefault();}">
-                            <button type="button" onclick="searchINTACodes()"
-                                style="height: 40px; padding: 0 14px; background: #1a1a1a; color: white; border: none; border-radius: 6px; font-size: 13px; font-family: inherit; cursor: pointer; white-space: nowrap;">جستجو</button>
-                        </div>
+                    <div class="type-option" onclick="selectType('partnership')">
+                        <div class="type-option-title">مشارکتی</div>
+                        <div class="type-option-desc">چند نفره</div>
                     </div>
-                    <div id="intaSearchResults"
-                        style="display: none; max-height: 200px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: var(--radius-md); margin-top: 8px; background: white;">
-                        <!-- Search results will be populated here -->
-                    </div>
-                </div>
-            </div>
-
-            <div id="intaCodeFormContainer">
-                <div class="card-list" id="intaCodeList">
-                    <!-- INTA code cards will be added here dynamically -->
-                </div>
-
-                <button type="button" class="btn-add" onclick="addIntaCode()">
-                    + افزودن کد فعالیت جدید
-                </button>
-
-                <div class="share-total" id="intaCodeTotal">
-                    مجموع درصد فعالیت: <strong id="intaCodeTotalValue">۰</strong>٪ (باید ۱۰۰٪ باشد)
-                </div>
-
-                <button type="button" class="btn-primary" id="intaCodeBtn" onclick="submitIntaCodes()">
-                    ثبت اینتاکد و ادامه
-                </button>
-            </div>
-        </div>
-
-        <!-- Step 6: VAT Status Section (مشمولیت ارزش افزوده) -->
-        <div id="vatStatusSection" style="display: none;">
-            <div class="header" style="margin-bottom: 24px;">
-                <h1>مشمولیت ارزش افزوده</h1>
-                <p>تعیین وضعیت مشمولیت مالیات بر ارزش افزوده</p>
-            </div>
-
-            <form id="vatStatusForm">
-                <div class="form-group">
-                    <label for="vatEligibilityStatus">وضعیت مشمولیت مودی <span
-                            style="color: var(--color-error);">*</span></label>
-                    <select id="vatEligibilityStatus" name="vatEligibilityStatus" required>
-                        <option value="" disabled selected>انتخاب کنید...</option>
-                        <option value="exempt">معاف</option>
-                        <option value="subject">مشمول</option>
-                        <option value="not_subject">غیرمشمول</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="vatFirstStageType">نوع مشمول مرحله اول</label>
-                    <select id="vatFirstStageType" name="vatFirstStageType">
-                        <option value="" disabled selected>انتخاب کنید...</option>
-                        <option value="mandatory">اجباری</option>
-                        <option value="voluntary">داوطلبانه</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="vatEligibilityDate">تاریخ مشمولیت</label>
-                    <input type="text" id="vatEligibilityDate" name="vatEligibilityDate"
-                        placeholder="برای انتخاب تاریخ کلیک کنید" readonly
-                        style="direction: ltr; text-align: left; cursor: pointer;">
-                </div>
-
-                <div class="form-group">
-                    <label for="salesAmount">فروش و عرضه کالا و خدمات (ریال)</label>
-                    <input type="text" id="salesAmount" name="salesAmount" placeholder="مبلغ فروش سالانه"
-                        inputmode="numeric" style="direction: ltr; text-align: left;">
-                </div>
-
-                <button type="submit" class="btn-primary" id="vatStatusBtn">ثبت وضعیت و ادامه</button>
-            </form>
-        </div>
-
-        <!-- Step 7: Bank Accounts Section (حساب‌های تجاری) -->
-        <div id="accountsSection" style="display: none;">
-            <div class="header" style="margin-bottom: 24px;">
-                <h1>حساب‌های تجاری</h1>
-                <p>حساب‌های بانکی مرتبط با کسب‌وکار</p>
-            </div>
-
-            <div id="accountsFormContainer">
-                <div class="card-list" id="accountsList">
-                    <!-- Account cards will be added here dynamically -->
-                </div>
-
-                <button type="button" class="btn-add" onclick="addAccount()">
-                    + افزودن حساب بانکی جدید
-                </button>
-
-                <button type="button" class="btn-primary" id="accountsBtn" onclick="submitBankAccounts()">
-                    ثبت حساب‌ها و ادامه
-                </button>
-            </div>
-        </div>
-
-        <!-- Step 8: Geo Location Section (موقعیت جغرافیایی) -->
-        <div id="geoLocationSection" style="display: none;">
-            <div class="header" style="margin-bottom: 24px;">
-                <h1>موقعیت جغرافیایی</h1>
-                <p>مختصات محل فعالیت کسب‌وکار روی نقشه</p>
-            </div>
-
-            <form id="geoLocationForm">
-                <div class="form-group">
-                    <label for="latitude">عرض جغرافیایی (Latitude) <span
-                            style="color: var(--color-error);">*</span></label>
-                    <input type="text" id="latitude" name="latitude" placeholder="مثال: 35.6892" inputmode="decimal"
-                        pattern="-?[0-9]*\.?[0-9]+" style="direction: ltr; text-align: left;" required>
-                    <p class="hint">مثال: 35.6892 برای تهران</p>
-                </div>
-
-                <div class="form-group">
-                    <label for="longitude">طول جغرافیایی (Longitude) <span
-                            style="color: var(--color-error);">*</span></label>
-                    <input type="text" id="longitude" name="longitude" placeholder="مثال: 51.3890" inputmode="decimal"
-                        pattern="-?[0-9]*\.?[0-9]+" style="direction: ltr; text-align: left;" required>
-                    <p class="hint">مثال: 51.3890 برای تهران</p>
-                </div>
-
-                <div class="form-group"
-                    style="background: #f0f9ff; border: 1px solid #0ea5e9; border-radius: var(--radius-md); padding: 16px; margin-bottom: 20px;">
-                    <p style="color: #0369a1; font-size: 14px; margin: 0;">
-                        <strong>راهنما:</strong> برای پیدا کردن مختصات، می‌توانید از Google Maps استفاده کنید:
-                        <br>۱. به maps.google.com بروید
-                        <br>۲. روی محل کسب‌وکار راست‌کلیک کنید
-                        <br>۳. مختصات را کپی کنید (اولین عدد = عرض، دومین عدد = طول)
-                    </p>
-                </div>
-
-                <button type="submit" class="btn-primary" id="geoLocationBtn">ثبت موقعیت و ادامه</button>
-            </form>
-        </div>
-
-        <!-- Step 9: Final Confirmation Section (تایید نهایی) -->
-        <div id="finalConfirmSection" style="display: none;">
-            <div class="header" style="margin-bottom: 24px;">
-                <h1>تایید نهایی</h1>
-                <p>بررسی نهایی و ارسال درخواست ثبت‌نام</p>
-            </div>
-
-            <div id="deficienciesList" class="help-panel"
-                style="display: none; background: #fef2f2; border-color: #fecaca;">
-                <div class="help-header">
-                    <span class="help-icon">⚠️</span>
-                    <h3 style="color: #991b1b;">نواقص موجود</h3>
-                </div>
-                <div class="help-content">
-                    <p style="color: #dc2626;">لطفاً قبل از تایید نهایی، نواقص زیر را برطرف کنید:</p>
-                    <ul id="deficiencyItems" style="color: #991b1b; padding-right: 20px;">
-                        <!-- Deficiency items will be populated dynamically -->
-                    </ul>
-                </div>
-            </div>
-
-            <div id="confirmationSummary"
-                style="background: #f0fdf4; border: 1px solid #86efac; border-radius: var(--radius-md); padding: 20px; margin-bottom: 20px;">
-                <h3 style="color: #166534; margin-bottom: 12px;">خلاصه اطلاعات ثبت‌نام</h3>
-                <div id="summaryContent" style="color: #15803d; font-size: 14px; line-height: 1.8;">
-                    <!-- Summary will be populated dynamically -->
                 </div>
             </div>
 
             <div class="form-group">
-                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                    <input type="checkbox" id="confirmAccuracy" style="width: 20px; height: 20px;">
-                    <span>صحت اطلاعات وارد شده را تأیید می‌کنم <span style="color: var(--color-error);">*</span></span>
-                </label>
+                <label for="shebaNumber">شماره شبا (۲۴ رقم بدون IR)</label>
+                <input type="text" id="shebaNumber" placeholder="۹۶۰۵۶۰۰۸۳۲۸۸۸۰۳۱۰۳۲۷۶۰۰۱" maxlength="26" dir="ltr" style="text-align: right;">
             </div>
 
-            <button type="button" class="btn-primary" id="finalConfirmBtn" onclick="submitFinalConfirmation()" disabled>
-                تایید نهایی و ارسال درخواست
+            <!-- Partners section (only for partnership) -->
+            <div id="partnersSection" class="partners-section">
+                <label>اطلاعات شرکا</label>
+                <table class="partners-table">
+                    <thead>
+                        <tr>
+                            <th>کد ملی</th>
+                            <th>درصد سهم</th>
+                            <th>نقش</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="partnersTableBody">
+                        <tr>
+                            <td><input type="text" class="partner-national-id" maxlength="10" placeholder="۱۲۳۴۵۶۷۸۹۰"></td>
+                            <td><input type="number" class="partner-share" min="1" max="100" placeholder="۵۰"></td>
+                            <td>
+                                <select class="partner-role">
+                                    <option value="شریک">شریک</option>
+                                    <option value="مدیر">مدیر</option>
+                                </select>
+                            </td>
+                            <td><button type="button" class="remove-partner-btn" onclick="removePartner(this)">حذف</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+                <button type="button" class="btn btn-secondary add-partner-btn" onclick="addPartner()">
+                    + افزودن شریک
+                </button>
+                <p class="text-muted mt-3">مجموع درصد سهام باید ۱۰۰٪ باشد</p>
+            </div>
+
+            <button class="btn btn-primary" id="submitBtn" onclick="submitRegistration()">
+                ثبت‌نام خودکار
             </button>
         </div>
 
-        <!-- Progress Tracker -->
-        <div class="progress-tracker" id="progressTracker">
-            <div class="progress-header" id="progressHeader">
-                <span class="progress-title">وضعیت پیشرفت</span>
-                <span class="progress-toggle" id="progressToggle">▼</span>
+        <!-- Panel 3: Progress -->
+        <div id="progressPanel" class="panel">
+            <h2 style="text-align: center; margin-bottom: 24px;">در حال ثبت‌نام...</h2>
+
+            <div class="progress-container">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+
+                <div class="progress-steps" id="progressSteps">
+                    <div class="progress-step" data-step="1">
+                        <span class="progress-step-icon">۱</span>
+                        <span>ایجاد ثبت‌نام جدید</span>
+                    </div>
+                    <div class="progress-step" data-step="2">
+                        <span class="progress-step-icon">۲</span>
+                        <span>دریافت توکن SSO</span>
+                    </div>
+                    <div class="progress-step" data-step="3">
+                        <span class="progress-step-icon">۳</span>
+                        <span>احراز هویت سامانه ثبت</span>
+                    </div>
+                    <div class="progress-step" data-step="4">
+                        <span class="progress-step-icon">۴</span>
+                        <span>ثبت اطلاعات پایه</span>
+                    </div>
+                    <div class="progress-step" data-step="5">
+                        <span class="progress-step-icon">۵</span>
+                        <span>ثبت کد فعالیت</span>
+                    </div>
+                    <div class="progress-step" data-step="6">
+                        <span class="progress-step-icon">۶</span>
+                        <span>ثبت وضعیت مالیات</span>
+                    </div>
+                    <div class="progress-step" data-step="7">
+                        <span class="progress-step-icon">۷</span>
+                        <span>ثبت شماره شبا</span>
+                    </div>
+                    <div class="progress-step" data-step="8">
+                        <span class="progress-step-icon">۸</span>
+                        <span>ثبت اطلاعات شرکا</span>
+                    </div>
+                </div>
             </div>
-            <div class="progress-steps" id="progressSteps">
-                <!-- Steps generated dynamically by JavaScript -->
+        </div>
+
+        <!-- Panel 4: Result -->
+        <div id="resultPanel" class="panel">
+            <div class="result-card">
+                <div class="result-icon success" id="resultIcon">✓</div>
+                <h2 class="result-title" id="resultTitle">ثبت‌نام با موفقیت انجام شد</h2>
+                <p class="text-muted" id="resultMessage"></p>
+
+                <div class="result-tracking" id="trackingSection" style="display: none;">
+                    <div class="result-tracking-label">کد رهگیری</div>
+                    <div class="result-tracking-code" id="trackingCode"></div>
+                </div>
+
+                <button class="btn btn-primary mt-3" onclick="startNew()">
+                    ثبت‌نام جدید
+                </button>
             </div>
         </div>
     </div>
 
     <script>
-        let captchaData = null;
-        let currentStep = 0;
-        let userMobile = '';
+        // State
+        let captchaKey = '';
+        let csrfToken = '';
+        let currentMobile = '';
+        let registrationType = 'individual';
 
-        // Progress Step Definitions (post-login steps only)
-        // Matches register.tax.gov.ir/Pages/Preaction/HomePage flow
-        const STEPS = [
-            { id: 1, label: 'دسترسی به داشبورد' },
-            { id: 2, label: 'شروع پرونده مالیاتی' },
-            { id: 3, label: 'اطلاعات پایه ثبت‌نام' },
-            { id: 4, label: 'اعضاء و شرکاء' },
-            { id: 5, label: 'اینتاکد فعالیت' },
-            { id: 6, label: 'مشمولیت ارزش افزوده' },
-            { id: 7, label: 'حساب‌های تجاری' },
-            { id: 8, label: 'موقعیت جغرافیایی' },
-            { id: 9, label: 'تایید نهایی' }
-        ];
-
-        // Registration type (Single/Company) - set when tax file is started
-        let registrationType = 'Single';
-        // Partner counter for unique IDs
-        let partnerCounter = 0;
-        // INTA code counter for unique IDs
-        let intaCodeCounter = 0;
-        // Account counter for unique IDs
-        let accountCounter = 0;
-        // Registration ID pending deletion (when there's an incomplete registration)
-        let pendingDeleteRegistrationId = null;
-
-        // Step State Manager
-        const stepState = {
-            steps: {},
-            init() {
-                STEPS.forEach(s => {
-                    this.steps[s.id] = { status: 'pending', time: null, error: null };
-                });
-                this.render();
-            },
-            setActive(stepId) {
-                this.steps[stepId].status = 'active';
-                this.steps[stepId].time = new Date();
-                this.steps[stepId].error = null;
-                this.render();
-            },
-            setCompleted(stepId) {
-                this.steps[stepId].status = 'completed';
-                this.steps[stepId].time = new Date();
-                this.steps[stepId].error = null;
-                this.render();
-            },
-            setError(stepId, errorMsg) {
-                this.steps[stepId].status = 'error';
-                this.steps[stepId].error = errorMsg;
-                this.render();
-            },
-            formatTime(date) {
-                if (!date) return '--:--';
-                return date.toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            },
-            toPersianNum(num) {
-                const persianDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
-                return String(num).replace(/\d/g, d => persianDigits[d]);
-            },
-            render() {
-                const container = document.getElementById('progressSteps');
-                if (!container) return;
-
-                container.innerHTML = STEPS.map(step => {
-                    const state = this.steps[step.id];
-                    const statusIcon = state.status === 'completed' ? '<span class="check">✓</span>' :
-                        state.status === 'active' ? '<span class="spinner-small"></span>' :
-                            state.status === 'error' ? '<span class="error-icon">✕</span>' : '';
-
-                    return `
-                        <div class="step" data-step="${step.id}" data-status="${state.status}">
-                            <div class="step-indicator">${this.toPersianNum(step.id)}</div>
-                            <div class="step-content">
-                                <span class="step-label">${step.label}</span>
-                                <span class="step-time">${this.formatTime(state.time)}</span>
-                            </div>
-                            <div class="step-status">${statusIcon}</div>
-                        </div>
-                        ${state.error ? `<div class="step-error"><span class="error-text">${state.error}</span></div>` : ''}
-                    `;
-                }).join('');
-            }
-        };
-
-        async function startRedirectTracker() {
-            currentStep = 1;
-            showStatus('در حال اتصال به سرور...', 'loading');
-
-            try {
-                const response = await fetch('/api/start-tracker', {
-                    method: 'POST'
-                });
-
-                const data = await response.json();
-
-                if (data.success && data.captcha) {
-                    captchaData = data.captcha;
-                    displayCaptcha(data.captcha);
-                    currentStep = 2;
-                    showStatus('آماده ورود', 'success');
-                    setTimeout(() => hideStatus(), 2000);
-                } else {
-                    showStatus('خطا: ' + (data.error || 'دریافت کپچا ناموفق'), 'error');
-                }
-            } catch (error) {
-                showStatus('خطا در اتصال: ' + error.message, 'error');
-            }
-        }
-
-        function displayCaptcha(captcha) {
-            const img = document.getElementById('captchaImage');
-            const placeholder = document.getElementById('captchaPlaceholder');
-
-            if (captcha.imageData) {
-                img.src = captcha.imageData;
-                img.style.display = 'block';
-                placeholder.style.display = 'none';
-            }
-        }
-
-        function showStatus(message, type) {
-            const status = document.getElementById('status');
-            status.className = 'status ' + type;
-
-            if (type === 'loading') {
-                status.innerHTML = '<span class="spinner"></span><span>' + message + '</span>';
-                // Set aria-busy on active buttons during loading (Issue 18)
-                document.querySelectorAll('.btn-primary:not(:disabled)').forEach(btn => {
-                    btn.setAttribute('aria-busy', 'true');
-                });
-            } else {
-                status.textContent = message;
-                // Clear aria-busy when not loading
-                document.querySelectorAll('.btn-primary').forEach(btn => {
-                    btn.removeAttribute('aria-busy');
-                });
-            }
-        }
-
-        function hideStatus() {
-            const status = document.getElementById('status');
-            status.className = 'status';
-        }
-
-        // OTP Input Management
-        function initOtpInputs() {
-            const otpInputs = document.querySelectorAll('.otp-input');
-
-            otpInputs.forEach((input, index) => {
-                // Input: validate digit, auto-focus next, auto-submit on 5th digit
-                input.addEventListener('input', (e) => {
-                    if (!/^\d$/.test(e.target.value)) {
-                        e.target.value = '';
-                        input.classList.remove('filled');
-                        return;
-                    }
-                    input.classList.add('filled');
-                    if (index < 4) {
-                        otpInputs[index + 1].focus();
-                    } else if (getOtpValue().length === 5) {
-                        document.getElementById('otpForm').requestSubmit();
-                    }
-                });
-
-                // Backspace: go to previous input
-                input.addEventListener('keydown', (e) => {
-                    if (e.key === 'Backspace' && !e.target.value && index > 0) {
-                        otpInputs[index - 1].focus();
-                        otpInputs[index - 1].value = '';
-                        otpInputs[index - 1].classList.remove('filled');
-                    }
-                });
-
-                // Paste: distribute digits across inputs + auto-submit if complete
-                input.addEventListener('paste', (e) => {
-                    e.preventDefault();
-                    const digits = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 5);
-                    digits.split('').forEach((d, i) => {
-                        if (otpInputs[i]) {
-                            otpInputs[i].value = d;
-                            otpInputs[i].classList.add('filled');
-                        }
-                    });
-                    otpInputs[Math.min(digits.length, 4)].focus();
-                    if (digits.length === 5) {
-                        document.getElementById('otpForm').requestSubmit();
-                    }
-                });
-
-                // Select all on focus
-                input.addEventListener('focus', (e) => {
-                    e.target.select();
-                });
-            });
-        }
-
-        function getOtpValue() {
-            return Array.from(document.querySelectorAll('.otp-input'))
-                .map(input => input.value).join('');
-        }
-
-        function clearOtpInputs() {
-            document.querySelectorAll('.otp-input').forEach(input => {
-                input.value = '';
-                input.classList.remove('filled', 'error');
-            });
-            document.querySelector('.otp-input').focus();
-        }
-
-        function setOtpError() {
-            document.querySelectorAll('.otp-input').forEach(i => i.classList.add('error'));
-            setTimeout(() => {
-                document.querySelectorAll('.otp-input').forEach(i => i.classList.remove('error'));
-            }, 2000);
-        }
-
-        // Show help panel for incomplete registrations
-        function showIncompleteRegistrationHelp() {
-            document.getElementById('incompleteRegHelp').style.display = 'block';
-        }
-
-        // Hide help panel for incomplete registrations
-        function hideIncompleteRegistrationHelp() {
-            document.getElementById('incompleteRegHelp').style.display = 'none';
-        }
-
-        // Check if error is about incomplete registrations
-        function isIncompleteRegistrationError(errorMsg) {
-            if (!errorMsg) return false;
-            // Check for various patterns that indicate incomplete registration
-            const patterns = [
-                'تکمیل ثبت نام های حقیقی فعال',
-                'تکمیل ثبت نام',
-                'ثبت نام های حقیقی فعال',
-                'قبل از گام 4',
-                'ابتدا نسبت به تکمیل'
-            ];
-            return patterns.some(pattern => errorMsg.includes(pattern));
-        }
-
-        // Fetch incomplete registrations from dashboard
-        async function fetchIncompleteRegistrations() {
-            showStatus('در حال دریافت پرونده‌های ناتمام...', 'loading');
-            const deleteSection = document.getElementById('deleteRegistrationSection');
-            deleteSection.innerHTML = '<div class="warning-icon">⏳</div><div class="warning-title">در حال بارگذاری...</div>';
-            deleteSection.style.display = 'block';
-
-            try {
-                const response = await fetch('/api/incomplete-registrations');
-                const data = await response.json();
-
-                console.log('Incomplete registrations response:', data);
-
-                if (data.success && data.data && data.data.length > 0) {
-                    showIncompleteRegistrationsList(data.data);
-                    showStatus('پرونده‌های ناتمام یافت شد', 'info');
-                } else if (data.success && (!data.data || data.data.length === 0)) {
-                    deleteSection.innerHTML = `
-                        <div class="warning-icon">ℹ️</div>
-                        <div class="warning-title">پرونده ناتمامی یافت نشد</div>
-                        <div class="warning-text">ممکن است پرونده قبلاً حذف شده باشد. لطفاً دوباره تلاش کنید.</div>
-                    `;
-                    showStatus('پرونده ناتمامی یافت نشد', 'info');
-                } else {
-                    deleteSection.innerHTML = `
-                        <div class="warning-icon">❌</div>
-                        <div class="warning-title">خطا در دریافت پرونده‌ها</div>
-                        <div class="warning-text">${data.error || 'خطای نامشخص'}</div>
-                    `;
-                    showStatus('خطا: ' + (data.error || 'خطا در دریافت پرونده‌ها'), 'error');
-                }
-            } catch (error) {
-                console.error('Error fetching incomplete registrations:', error);
-                deleteSection.innerHTML = `
-                    <div class="warning-icon">❌</div>
-                    <div class="warning-title">خطا در اتصال</div>
-                    <div class="warning-text">${error.message}</div>
-                `;
-                showStatus('خطا: ' + error.message, 'error');
-            }
-        }
-
-        // Show list of incomplete registrations with delete buttons
-        function showIncompleteRegistrationsList(registrations) {
-            const container = document.getElementById('deleteRegistrationSection');
-            let html = '<div class="warning-icon">⚠️</div>';
-            html += '<div class="warning-title">پرونده‌های ثبت‌نام ناتمام</div>';
-            html += '<div class="warning-text">برای ایجاد پرونده جدید، ابتدا پرونده‌های ناتمام را حذف کنید:</div>';
-            html += '<div class="incomplete-list" style="margin-top: 16px;">';
-
-            registrations.forEach(reg => {
-                const displayName = reg.businessName || 'بدون نام';
-                const displayStatus = reg.status || 'نامشخص';
-                html += `
-                    <div class="incomplete-item" style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #f8f9fa; border-radius: 8px; margin-bottom: 8px;">
-                        <span class="reg-info" style="flex: 1;">
-                            <strong>${displayName}</strong>
-                            <span style="color: #666; margin-right: 8px;">(${displayStatus})</span>
-                        </span>
-                        <button class="btn-delete" onclick="deleteRegistration('${reg.uuid}')" style="padding: 8px 16px;">
-                            🗑️ حذف
-                        </button>
-                    </div>
-                `;
-            });
-
-            html += '</div>';
-            container.innerHTML = html;
-            container.style.display = 'block';
-        }
-
-        // Hide delete registration section
-        function hideDeleteRegistrationSection() {
-            document.getElementById('deleteRegistrationSection').style.display = 'none';
-            pendingDeleteRegistrationId = null;
-        }
-
-        // Delete registration function
-        async function deleteRegistration(registrationId) {
-            if (!registrationId) {
-                showStatus('خطا: شناسه ثبت‌نام یافت نشد', 'error');
-                return;
-            }
-
-            // Confirmation dialog
-            if (!confirm('آیا از حذف این درخواست ثبت‌نام اطمینان دارید؟\n\nاین عمل قابل بازگشت نیست.')) {
-                return;
-            }
-
-            // Find and disable the button that was clicked
-            const buttons = document.querySelectorAll('.btn-delete');
-            buttons.forEach(btn => btn.disabled = true);
-            showStatus('در حال حذف درخواست ثبت‌نام...', 'loading');
-
-            try {
-                const response = await fetch('/api/delete-registration', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        registrationId: registrationId
-                    })
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    showStatus(data.message || 'درخواست با موفقیت حذف شد', 'success');
-                    hideDeleteRegistrationSection();
-                    hideIncompleteRegistrationHelp();
-                    // Re-enable the tax file form button
-                    document.getElementById('taxFileBtn').disabled = false;
-                    setTimeout(() => {
-                        showStatus('اکنون می‌توانید پرونده جدید ایجاد کنید', 'success');
-                    }, 1500);
-                } else {
-                    showStatus('خطا: ' + (data.error || 'حذف ناموفق'), 'error');
-                    // Re-enable buttons on error
-                    const buttons = document.querySelectorAll('.btn-delete');
-                    buttons.forEach(btn => btn.disabled = false);
-                }
-            } catch (error) {
-                showStatus('خطا: ' + error.message, 'error');
-                // Re-enable buttons on error
-                const buttons = document.querySelectorAll('.btn-delete');
-                buttons.forEach(btn => btn.disabled = false);
-            }
-        }
-
-        // Initialize Persian date picker for Jalali calendar
-        function initPersianDatePicker() {
-            if (typeof $ !== 'undefined' && $.fn.persianDatepicker) {
-                $('#startDate').persianDatepicker({
-                    format: 'YYYY/MM/DD',
-                    persianDigit: false,
-                    autoClose: true,
-                    initialValue: false,
-                    toolbox: {
-                        calendarSwitch: { enabled: false },
-                        todayButton: { enabled: true, text: { fa: 'امروز' } },
-                        submitButton: { enabled: true, text: { fa: 'تایید' } }
-                    },
-                    dayPicker: { enabled: true },
-                    monthPicker: { enabled: true },
-                    yearPicker: { enabled: true },
-                    responsive: true
-                });
-            }
-        }
-
-        document.getElementById('refreshCaptcha').addEventListener('click', async () => {
-            showStatus('در حال تازه‌سازی...', 'loading');
-
-            try {
-                const response = await fetch('/api/refresh-captcha', {
-                    method: 'POST'
-                });
-
-                const data = await response.json();
-
-                if (data.success && data.captcha) {
-                    captchaData = data.captcha;
-                    displayCaptcha(data.captcha);
-                    document.getElementById('captchaCode').value = '';
-                    showStatus('کپچا تازه شد', 'success');
-                    setTimeout(() => hideStatus(), 1500);
-                } else {
-                    showStatus('خطا در تازه‌سازی', 'error');
-                }
-            } catch (error) {
-                showStatus('خطا: ' + error.message, 'error');
-            }
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            initCaptcha();
         });
 
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
+        // Show/hide panels
+        function showPanel(panelId) {
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            document.getElementById(panelId).classList.add('active');
 
-            const mobile = document.getElementById('mobile').value;
-            const captchaCode = document.getElementById('captchaCode').value;
-            const loginBtn = document.getElementById('loginBtn');
+            // Update phase indicator
+            const phase1 = document.getElementById('phase1');
+            const phase2 = document.getElementById('phase2');
 
-            if (!captchaData) {
-                showStatus('لطفاً منتظر بارگذاری کپچا بمانید', 'error');
+            if (panelId === 'loginPanel') {
+                phase1.className = 'phase active';
+                phase2.className = 'phase';
+            } else {
+                phase1.className = 'phase completed';
+                phase2.className = 'phase active';
+            }
+        }
+
+        // Show alert
+        function showAlert(message, type = 'error') {
+            const alert = document.getElementById('alert');
+            alert.textContent = message;
+            alert.className = `alert alert-${type} show`;
+            setTimeout(() => alert.classList.remove('show'), 5000);
+        }
+
+        // Initialize captcha
+        async function initCaptcha() {
+            try {
+                const response = await fetch('/api/start-tracker', { method: 'POST' });
+                const data = await response.json();
+
+                if (data.success && data.captcha) {
+                    captchaKey = data.captcha.key;
+                    csrfToken = data.captcha.csrfToken;
+                    document.getElementById('captchaImage').innerHTML =
+                        `<img src="data:image/png;base64,${data.captcha.imageData}" alt="captcha">`;
+                } else {
+                    showAlert(data.error || 'خطا در بارگذاری کپچا');
+                }
+            } catch (err) {
+                showAlert('خطا در اتصال به سرور');
+            }
+        }
+
+        // Refresh captcha
+        async function refreshCaptcha() {
+            const btn = document.getElementById('refreshCaptcha');
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/api/refresh-captcha', { method: 'POST' });
+                const data = await response.json();
+
+                if (data.success && data.captcha) {
+                    captchaKey = data.captcha.key;
+                    csrfToken = data.captcha.csrfToken;
+                    document.getElementById('captchaImage').innerHTML =
+                        `<img src="data:image/png;base64,${data.captcha.imageData}" alt="captcha">`;
+                } else {
+                    showAlert(data.error || 'خطا در بارگذاری کپچا');
+                }
+            } catch (err) {
+                showAlert('خطا در اتصال به سرور');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        // Send OTP
+        async function sendOTP() {
+            const mobile = document.getElementById('mobile').value.trim();
+            const captchaCode = document.getElementById('captchaCode').value.trim();
+
+            if (!mobile || mobile.length !== 11) {
+                showAlert('لطفاً شماره موبایل معتبر وارد کنید');
                 return;
             }
 
-            // Mobile validation (Issue 20)
-            if (!/^09\d{9}$/.test(mobile)) {
-                showStatus('شماره موبایل نامعتبر است', 'error');
+            if (!captchaCode) {
+                showAlert('لطفاً کد کپچا را وارد کنید');
                 return;
             }
 
-            // Captcha validation - 5 digits (Issue 21)
-            if (!captchaCode || captchaCode.length !== 5 || !/^\d+$/.test(captchaCode)) {
-                showStatus('کد امنیتی باید ۵ رقم باشد', 'error');
-                return;
-            }
-
-            loginBtn.disabled = true;
-            showStatus('در حال ارسال کد...', 'loading');
+            const btn = document.getElementById('sendOtpBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> در حال ارسال...';
 
             try {
                 const response = await fetch('/api/send-otp', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        mobile: mobile,
-                        captchaCode: captchaCode,
-                        captchaKey: captchaData.key,
-                        csrfToken: captchaData.csrfToken
+                        mobile,
+                        captchaCode,
+                        captchaKey,
+                        csrfToken
                     })
                 });
 
                 const data = await response.json();
 
                 if (data.success) {
-                    userMobile = mobile;
-                    document.getElementById('loginForm').style.display = 'none';
-                    document.getElementById('otpForm').style.display = 'block';
-                    document.getElementById('sentMobile').textContent = mobile;
-                    showStatus('کد تأیید ارسال شد', 'success');
-                    setTimeout(() => hideStatus(), 2500);
-                    document.querySelector('.otp-input').focus();
+                    currentMobile = mobile;
+                    document.getElementById('displayMobile').textContent = mobile;
+                    document.getElementById('captchaStep').style.display = 'none';
+                    document.getElementById('otpStep').style.display = 'block';
+                    showAlert('کد تایید ارسال شد', 'success');
                 } else {
-                    showStatus('خطا: ' + (data.error || 'ارسال ناموفق'), 'error');
-                    loginBtn.disabled = false;
+                    showAlert(data.error || 'خطا در ارسال کد');
+                    refreshCaptcha();
                 }
-            } catch (error) {
-                showStatus('خطا: ' + error.message, 'error');
-                loginBtn.disabled = false;
+            } catch (err) {
+                showAlert('خطا در اتصال به سرور');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'ارسال کد تایید';
             }
-        });
+        }
 
-        document.getElementById('otpForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
+        // Verify OTP
+        async function verifyOTP() {
+            const otpCode = document.getElementById('otpCode').value.trim();
 
-            const otpCode = getOtpValue();
-            const otpBtn = document.getElementById('otpBtn');
-
-            // OTP validation - 5 digits only (Issue 22)
-            if (!otpCode || otpCode.length !== 5 || !/^\d+$/.test(otpCode)) {
-                showStatus('کد تأیید باید ۵ رقم باشد', 'error');
-                setOtpError();
+            if (!otpCode || otpCode.length !== 6) {
+                showAlert('لطفاً کد ۶ رقمی را وارد کنید');
                 return;
             }
 
-            if (!captchaData || !userMobile) {
-                showStatus('خطا: لطفاً صفحه را رفرش کنید', 'error');
-                return;
-            }
-
-            otpBtn.disabled = true;
-            showStatus('در حال تأیید...', 'loading');
+            const btn = document.getElementById('verifyOtpBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> در حال تایید...';
 
             try {
                 const response = await fetch('/api/verify-otp', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        mobile: userMobile,
-                        otpCode: otpCode,
-                        csrfToken: captchaData.csrfToken
+                        mobile: currentMobile,
+                        otpCode,
+                        csrfToken
                     })
                 });
 
                 const data = await response.json();
 
                 if (data.success) {
-                    showStatus('ورود موفق!', 'success');
-                    document.getElementById('otpForm').style.display = 'none';
-                    document.getElementById('dashboardSection').style.display = 'block';
+                    showAlert('ورود موفق!', 'success');
+                    showPanel('registrationPanel');
                 } else {
-                    showStatus('خطا: ' + (data.error || 'تأیید ناموفق'), 'error');
-                    setOtpError();
-                    clearOtpInputs();
-                    otpBtn.disabled = false;
+                    showAlert(data.error || 'کد نامعتبر است');
                 }
-            } catch (error) {
-                showStatus('خطا: ' + error.message, 'error');
-                setOtpError();
-                otpBtn.disabled = false;
-            }
-        });
-
-        document.getElementById('dashboardBtn').addEventListener('click', async () => {
-            const dashboardBtn = document.getElementById('dashboardBtn');
-            dashboardBtn.disabled = true;
-            showStatus('در حال دسترسی...', 'loading');
-            stepState.setActive(1);
-
-            try {
-                const response = await fetch('/api/access-dashboard', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    stepState.setCompleted(1);
-                    showStatus('دسترسی موفق!', 'success');
-                    document.getElementById('dashboardSection').style.display = 'none';
-                    document.getElementById('taxFileSection').style.display = 'block';
-                } else {
-                    stepState.setError(1, data.error || 'دسترسی ناموفق');
-                    showStatus('خطا: ' + (data.error || 'دسترسی ناموفق'), 'error');
-                    dashboardBtn.disabled = false;
-                }
-            } catch (error) {
-                stepState.setError(1, error.message);
-                showStatus('خطا: ' + error.message, 'error');
-                dashboardBtn.disabled = false;
-            }
-        });
-
-        document.getElementById('taxFileForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            const postalCode = document.getElementById('postalCode').value;
-            const businessName = document.getElementById('businessName').value;
-            const regType = document.getElementById('regType').value;
-            const taxFileBtn = document.getElementById('taxFileBtn');
-
-            taxFileBtn.disabled = true;
-            showStatus('در حال شروع پرونده...', 'loading');
-            stepState.setActive(2);
-
-            try {
-                const response = await fetch('/api/start-tax-file', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        postalCode: postalCode,
-                        businessName: businessName,
-                        type: regType
-                    })
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    stepState.setCompleted(2);
-                    showStatus('پرونده با موفقیت شروع شد', 'success');
-                    // Store registration type for later use
-                    registrationType = regType;
-                    // Hide help panel if visible
-                    hideIncompleteRegistrationHelp();
-                    // Hide tax file section and show basic info section
-                    document.getElementById('taxFileSection').style.display = 'none';
-                    document.getElementById('basicInfoSection').style.display = 'block';
-                    // Pre-fill unit title with business name
-                    document.getElementById('unitTitle').value = businessName;
-                    // Load form options and initialize date picker
-                    loadFormOptions();
-                    initPersianDatePicker();
-                } else {
-                    // Error message can come from data.error, data.message, or data.data.error
-                    const errorMsg = data.error || data.message || (data.data && data.data.error) || 'شروع ناموفق';
-                    console.log('Tax file error response:', data);
-                    console.log('Error message:', errorMsg);
-                    stepState.setError(2, errorMsg);
-                    showStatus('خطا: ' + errorMsg, 'error');
-                    // Check if this is the incomplete registration error
-                    const isIncomplete = isIncompleteRegistrationError(errorMsg);
-                    console.log('Is incomplete registration error:', isIncomplete);
-                    if (isIncomplete) {
-                        showIncompleteRegistrationHelp();
-                        // Auto-fetch incomplete registrations from dashboard
-                        fetchIncompleteRegistrations();
-                    }
-                    taxFileBtn.disabled = false;
-                }
-            } catch (error) {
-                stepState.setError(2, error.message);
-                showStatus('خطا: ' + error.message, 'error');
-                taxFileBtn.disabled = false;
-            }
-        });
-
-        // Form options cache
-        let formOptions = null;
-
-        // Load form options from server
-        async function loadFormOptions() {
-            if (formOptions) {
-                populateDropdowns(formOptions);
-                return;
-            }
-
-            try {
-                const response = await fetch('/api/form-options');
-                const data = await response.json();
-
-                if (data.success && data.data) {
-                    formOptions = data.data;
-                    populateDropdowns(formOptions);
-                } else {
-                    console.error('Failed to load form options:', data.error);
-                }
-            } catch (error) {
-                console.error('Error loading form options:', error);
+            } catch (err) {
+                showAlert('خطا در اتصال به سرور');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'تایید و ورود';
             }
         }
 
-        // Populate dropdown with options
-        function populateDropdown(selectId, options) {
-            const select = document.getElementById(selectId);
-            if (!select || !options) return;
-
-            // Keep the first placeholder option
-            const placeholder = select.querySelector('option[disabled]');
-            select.innerHTML = '';
-            if (placeholder) select.appendChild(placeholder);
-
-            options.forEach(opt => {
-                const option = document.createElement('option');
-                option.value = opt.value;
-                option.textContent = opt.labelFa || opt.label;
-                select.appendChild(option);
-            });
+        // Back to captcha
+        function backToCaptcha() {
+            document.getElementById('captchaStep').style.display = 'block';
+            document.getElementById('otpStep').style.display = 'none';
+            document.getElementById('captchaCode').value = '';
+            refreshCaptcha();
         }
 
-        // Populate all dropdowns with options
-        function populateDropdowns(opts) {
-            populateDropdown('registrationReason', opts.RegistrationReasons);
-            populateDropdown('activityType', opts.ActivityTypes);
-            populateDropdown('eightCategoryJob', opts.EightCategoryJobs);
-            populateDropdown('individualJob', opts.IndividualJobs);
-            populateDropdown('professionalGuild', opts.ProfessionalGuilds);
-            populateDropdown('professionalAssembly', opts.ProfessionalAssemblies);
-            populateDropdown('guildUnion', opts.GuildUnions);
-            populateDropdown('businessLicense', opts.BusinessLicenses);
-            populateDropdown('ownershipType', opts.OwnershipTypes);
-        }
+        // Select registration type
+        function selectType(type) {
+            registrationType = type;
+            document.querySelectorAll('.type-option').forEach(opt => opt.classList.remove('selected'));
+            event.currentTarget.classList.add('selected');
 
-        // Basic info form submission
-        document.getElementById('basicInfoForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            const basicInfoBtn = document.getElementById('basicInfoBtn');
-            basicInfoBtn.disabled = true;
-            showStatus('در حال ثبت اطلاعات پایه...', 'loading');
-            stepState.setActive(3);
-
-            const formData = {
-                registrationReason: document.getElementById('registrationReason').value,
-                activityType: document.getElementById('activityType').value,
-                startDate: persianToEnglishDigits(document.getElementById('startDate').value),
-                unitTitle: document.getElementById('unitTitle').value,
-                eightCategoryJob: document.getElementById('eightCategoryJob').value,
-                individualJob: document.getElementById('individualJob').value,
-                professionalGuild: document.getElementById('professionalGuild').value,
-                professionalAssembly: document.getElementById('professionalAssembly').value,
-                guildUnion: document.getElementById('guildUnion').value,
-                businessLicense: document.getElementById('businessLicense').value,
-                ownershipType: document.getElementById('ownershipType').value,
-                website: document.getElementById('website').value
-            };
-
-            try {
-                const response = await fetch('/api/submit-basic-info', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(formData)
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    stepState.setCompleted(3);
-                    showStatus(data.message || 'اطلاعات پایه با موفقیت ثبت شد', 'success');
-                    // Hide basic info section and show partners section
-                    document.getElementById('basicInfoSection').style.display = 'none';
-                    document.getElementById('partnersSection').style.display = 'block';
-                    // Show skip option for individual businesses
-                    if (registrationType === 'Single') {
-                        document.getElementById('skipPartnersSection').style.display = 'block';
-                    }
-                    // Add first partner card
-                    addPartner();
-                } else {
-                    stepState.setError(3, data.error || 'ثبت ناموفق');
-                    showStatus('خطا: ' + (data.error || 'ثبت ناموفق'), 'error');
-                    basicInfoBtn.disabled = false;
-                }
-            } catch (error) {
-                stepState.setError(3, error.message);
-                showStatus('خطا: ' + error.message, 'error');
-                basicInfoBtn.disabled = false;
-            }
-        });
-
-        // =====================
-        // PARTNERS MANAGEMENT (Step 4)
-        // =====================
-
-        // Convert number to Persian numerals
-        function toPersianNum(num) {
-            const persianDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
-            return String(num).replace(/\d/g, d => persianDigits[d]);
-        }
-
-        // Convert Persian digits to English/Arabic digits
-        function persianToEnglishDigits(str) {
-            if (!str) return str;
-            const persianDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
-            const englishDigits = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
-            let result = String(str);
-            for (let i = 0; i < 10; i++) {
-                result = result.replace(new RegExp(persianDigits[i], 'g'), englishDigits[i]);
-            }
-            return result;
-        }
-
-        // Add a new partner card
-        function addPartner() {
-            partnerCounter++;
-            const partnerId = partnerCounter;
-            const partnersList = document.getElementById('partnersList');
-
-            const card = document.createElement('div');
-            card.className = 'partner-card';
-            card.id = `partner-${partnerId}`;
-            card.innerHTML = `
-                <div class="card-header">
-                    <span class="card-title">شریک ${toPersianNum(partnerId)}</span>
-                    <button type="button" class="btn-remove" onclick="removePartner(${partnerId})">حذف</button>
-                </div>
-                <div class="card-row">
-                    <div class="form-group">
-                        <label>کد ملی <span style="color: var(--color-error);">*</span></label>
-                        <input type="text" id="partner-nationalId-${partnerId}"
-                               placeholder="کد ملی ۱۰ رقمی" maxlength="10"
-                               inputmode="numeric" pattern="[0-9]{10}"
-                               style="direction: ltr; text-align: left;"
-                               onchange="validateNationalId(this)">
-                    </div>
-                    <div class="form-group small">
-                        <label>سهم (٪) <span style="color: var(--color-error);">*</span></label>
-                        <input type="number" id="partner-share-${partnerId}"
-                               placeholder="۰" min="1" max="100"
-                               style="direction: ltr; text-align: center;"
-                               onchange="updateShareTotal()">
-                    </div>
-                </div>
-                <div class="card-row">
-                    <div class="form-group">
-                        <label>نام و نام خانوادگی <span style="color: var(--color-error);">*</span></label>
-                        <input type="text" id="partner-fullName-${partnerId}"
-                               placeholder="نام کامل شریک"
-                               style="direction: rtl; text-align: right;">
-                    </div>
-                </div>
-                <div class="card-row">
-                    <div class="form-group">
-                        <label>نقش <span style="color: var(--color-error);">*</span></label>
-                        <select id="partner-role-${partnerId}">
-                            <option value="" disabled selected>انتخاب کنید...</option>
-                            <option value="manager">مدیر</option>
-                            <option value="partner">شریک</option>
-                            <option value="shareholder">سهامدار</option>
-                            <option value="board_member">عضو هیئت مدیره</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="card-row">
-                    <div class="form-group">
-                        <label>کد پستی <span style="color: var(--color-error);">*</span></label>
-                        <input type="text" id="partner-postalCode-${partnerId}"
-                               placeholder="کد پستی ۱۰ رقمی" maxlength="10"
-                               inputmode="numeric" pattern="[0-9]{10}"
-                               style="direction: ltr; text-align: left;">
-                    </div>
-                    <div class="form-group">
-                        <label>تلفن همراه <span style="color: var(--color-error);">*</span></label>
-                        <input type="text" id="partner-mobile-${partnerId}"
-                               placeholder="۰۹۱۲۳۴۵۶۷۸۹" maxlength="11"
-                               inputmode="numeric" pattern="09[0-9]{9}"
-                               style="direction: ltr; text-align: left;">
-                    </div>
-                </div>
-            `;
-
-            partnersList.appendChild(card);
-            updateShareTotal();
-        }
-
-        // Remove a partner card
-        function removePartner(partnerId) {
-            const card = document.getElementById(`partner-${partnerId}`);
-            if (card) {
-                card.remove();
-                updateShareTotal();
-            }
-        }
-
-        // Validate national ID (10 digits)
-        function validateNationalId(input) {
-            const value = input.value.replace(/\D/g, '');
-            input.value = value;
-            if (value.length !== 10) {
-                input.style.borderColor = 'var(--color-error)';
+            const partnersSection = document.getElementById('partnersSection');
+            if (type === 'partnership') {
+                partnersSection.classList.add('show');
             } else {
-                input.style.borderColor = 'var(--color-border)';
+                partnersSection.classList.remove('show');
             }
         }
 
-        // Update share total display
-        function updateShareTotal() {
-            const cards = document.querySelectorAll('.partner-card');
-            let total = 0;
+        // Add partner row
+        function addPartner() {
+            const tbody = document.getElementById('partnersTableBody');
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td><input type="text" class="partner-national-id" maxlength="10" placeholder="۱۲۳۴۵۶۷۸۹۰"></td>
+                <td><input type="number" class="partner-share" min="1" max="100" placeholder="۵۰"></td>
+                <td>
+                    <select class="partner-role">
+                        <option value="شریک">شریک</option>
+                        <option value="مدیر">مدیر</option>
+                    </select>
+                </td>
+                <td><button type="button" class="remove-partner-btn" onclick="removePartner(this)">حذف</button></td>
+            `;
+            tbody.appendChild(row);
+        }
 
-            cards.forEach(card => {
-                const shareInput = card.querySelector('input[type="number"]');
-                if (shareInput && shareInput.value) {
-                    total += parseInt(shareInput.value, 10) || 0;
-                }
-            });
-
-            const totalElement = document.getElementById('shareTotalValue');
-            const containerElement = document.getElementById('shareTotal');
-
-            totalElement.textContent = toPersianNum(total);
-
-            // Update styling based on total
-            containerElement.classList.remove('error', 'success');
-            if (total === 100) {
-                containerElement.classList.add('success');
-            } else if (total > 100) {
-                containerElement.classList.add('error');
+        // Remove partner row
+        function removePartner(btn) {
+            const tbody = document.getElementById('partnersTableBody');
+            if (tbody.children.length > 1) {
+                btn.closest('tr').remove();
+            } else {
+                showAlert('حداقل یک شریک باید وجود داشته باشد');
             }
         }
 
-        // Skip partners section (for individual businesses) - go to INTA Code
-        function skipToAccounts() {
-            stepState.setCompleted(4);
-            document.getElementById('partnersSection').style.display = 'none';
-            document.getElementById('intaCodeSection').style.display = 'block';
-            // Add first INTA code card
-            addIntaCode();
-        }
-
-        // Collect partner data from cards
-        function collectPartnerData() {
-            const cards = document.querySelectorAll('.partner-card');
+        // Get partners data
+        function getPartnersData() {
+            const rows = document.querySelectorAll('#partnersTableBody tr');
             const partners = [];
 
-            cards.forEach(card => {
-                const id = card.id.replace('partner-', '');
-                const nationalId = document.getElementById(`partner-nationalId-${id}`).value;
-                const fullName = document.getElementById(`partner-fullName-${id}`).value;
-                const sharePercent = parseInt(document.getElementById(`partner-share-${id}`).value, 10) || 0;
-                const role = document.getElementById(`partner-role-${id}`).value;
-                const postalCode = document.getElementById(`partner-postalCode-${id}`).value;
-                const mobile = document.getElementById(`partner-mobile-${id}`).value;
+            rows.forEach(row => {
+                const nationalId = row.querySelector('.partner-national-id').value.trim();
+                const sharePercent = parseInt(row.querySelector('.partner-share').value) || 0;
+                const role = row.querySelector('.partner-role').value;
 
-                partners.push({ nationalId, fullName, sharePercent, role, postalCode, mobile });
+                if (nationalId) {
+                    partners.push({ nationalId, sharePercent, role });
+                }
             });
 
             return partners;
         }
 
-        // Submit partners
-        async function submitPartners() {
-            const partners = collectPartnerData();
+        // Submit registration
+        async function submitRegistration() {
+            const postalCode = document.getElementById('postalCode').value.trim();
+            const businessName = document.getElementById('businessName').value.trim();
+            const shebaNumber = document.getElementById('shebaNumber').value.trim().replace(/^IR/i, '');
 
-            // Validate partners
-            if (partners.length === 0) {
-                showStatus('لطفاً حداقل یک شریک اضافه کنید', 'error');
+            // Validation
+            if (!postalCode || postalCode.length !== 10) {
+                showAlert('کد پستی باید ۱۰ رقم باشد');
                 return;
             }
 
-            // Validate share total
-            const totalShare = partners.reduce((sum, p) => sum + p.sharePercent, 0);
-            if (totalShare !== 100) {
-                showStatus('مجموع سهام باید ۱۰۰٪ باشد', 'error');
+            if (!businessName) {
+                showAlert('عنوان واحد الزامی است');
                 return;
             }
 
-            // Validate each partner
-            for (let i = 0; i < partners.length; i++) {
-                const p = partners[i];
-                if (!p.nationalId || p.nationalId.length !== 10) {
-                    showStatus(`کد ملی شریک ${toPersianNum(i + 1)} نامعتبر است`, 'error');
+            if (!shebaNumber || shebaNumber.length !== 24) {
+                showAlert('شماره شبا باید ۲۴ رقم باشد (بدون IR)');
+                return;
+            }
+
+            let partners = [];
+            if (registrationType === 'partnership') {
+                partners = getPartnersData();
+                if (partners.length === 0) {
+                    showAlert('حداقل یک شریک باید وارد شود');
                     return;
                 }
-                if (!p.fullName) {
-                    showStatus(`نام شریک ${toPersianNum(i + 1)} را وارد کنید`, 'error');
-                    return;
-                }
-                if (!p.role) {
-                    showStatus(`نقش شریک ${toPersianNum(i + 1)} را انتخاب کنید`, 'error');
-                    return;
-                }
-                if (!p.postalCode || p.postalCode.length !== 10) {
-                    showStatus(`کد پستی شریک ${toPersianNum(i + 1)} نامعتبر است (۱۰ رقم)`, 'error');
-                    return;
-                }
-                if (!p.mobile || !p.mobile.match(/^09[0-9]{9}$/)) {
-                    showStatus(`تلفن همراه شریک ${toPersianNum(i + 1)} نامعتبر است (مثال: ۰۹۱۲۳۴۵۶۷۸۹)`, 'error');
+
+                const totalShare = partners.reduce((sum, p) => sum + p.sharePercent, 0);
+                if (totalShare !== 100) {
+                    showAlert(`مجموع درصد سهام باید ۱۰۰٪ باشد (فعلی: ${totalShare}٪)`);
                     return;
                 }
             }
 
-            const partnersBtn = document.getElementById('partnersBtn');
-            partnersBtn.disabled = true;
-            showStatus('در حال ثبت شرکا...', 'loading');
-            stepState.setActive(4);
+            // Show progress panel
+            showPanel('progressPanel');
+
+            // Simulate progress updates
+            const steps = document.querySelectorAll('.progress-step');
+            const progressFill = document.getElementById('progressFill');
 
             try {
-                const response = await fetch('/api/submit-partners', {
+                const response = await fetch('/api/register/complete', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ partners: partners })
+                    body: JSON.stringify({
+                        postalCode,
+                        businessName,
+                        registrationType,
+                        shebaNumber,
+                        partners
+                    })
                 });
 
                 const data = await response.json();
 
-                if (data.success) {
-                    stepState.setCompleted(4);
-                    showStatus(data.message || 'شرکا با موفقیت ثبت شدند', 'success');
-                    // Hide partners section and show INTA Code section
-                    document.getElementById('partnersSection').style.display = 'none';
-                    document.getElementById('intaCodeSection').style.display = 'block';
-                    // Add first INTA code card
-                    addIntaCode();
-                } else {
-                    stepState.setError(4, data.error || 'ثبت ناموفق');
-                    showStatus('خطا: ' + (data.error || 'ثبت ناموفق'), 'error');
-                    partnersBtn.disabled = false;
+                // Update progress based on response
+                if (data.data && data.data.steps) {
+                    data.data.steps.forEach((step, index) => {
+                        if (index < steps.length) {
+                            steps[index].classList.add(step.success ? 'completed' : 'error');
+                        }
+                        progressFill.style.width = `${((index + 1) / steps.length) * 100}%`;
+                    });
                 }
-            } catch (error) {
-                stepState.setError(4, error.message);
-                showStatus('خطا: ' + error.message, 'error');
-                partnersBtn.disabled = false;
+
+                // Show result
+                setTimeout(() => {
+                    if (data.success) {
+                        showResult(true, data.message, data.data?.trackingCode || data.data?.guid);
+                    } else {
+                        showResult(false, data.error);
+                    }
+                }, 500);
+
+            } catch (err) {
+                showResult(false, 'خطا در اتصال به سرور');
             }
         }
 
-        // =====================
-        // BANK ACCOUNTS MANAGEMENT (Step 7)
-        // =====================
+        // Show result
+        function showResult(success, message, trackingCode = null) {
+            const resultIcon = document.getElementById('resultIcon');
+            const resultTitle = document.getElementById('resultTitle');
+            const resultMessage = document.getElementById('resultMessage');
+            const trackingSection = document.getElementById('trackingSection');
+            const trackingCodeEl = document.getElementById('trackingCode');
 
-        // Add a new account card
-        function addAccount() {
-            accountCounter++;
-            const accountId = accountCounter;
-            const accountsList = document.getElementById('accountsList');
-
-            const card = document.createElement('div');
-            card.className = 'account-card';
-            card.id = `account-${accountId}`;
-            card.innerHTML = `
-                <div class="card-header">
-                    <span class="card-title">حساب ${toPersianNum(accountId)}</span>
-                    <button type="button" class="btn-remove" onclick="removeAccount(${accountId})">حذف</button>
-                </div>
-                <div class="card-row">
-                    <div class="form-group">
-                        <label>شماره شبا <span style="color: var(--color-error);">*</span></label>
-                        <input type="text" id="account-iban-${accountId}"
-                               class="iban-input"
-                               placeholder="۲۴ رقم بدون IR"
-                               maxlength="24" inputmode="numeric"
-                               onchange="validateIban(this)">
-                        <p class="hint">شماره شبا بدون حروف IR - فقط ۲۴ رقم</p>
-                    </div>
-                </div>
-                <div class="card-row">
-                    <div class="form-group">
-                        <label>تاریخ شروع استفاده <span style="color: var(--color-error);">*</span></label>
-                        <input type="text" id="account-startDate-${accountId}"
-                               class="account-date-picker"
-                               placeholder="برای انتخاب تاریخ کلیک کنید"
-                               readonly style="direction: ltr; text-align: left; cursor: pointer;">
-                    </div>
-                </div>
-            `;
-
-            accountsList.appendChild(card);
-
-            // Initialize Persian date picker for this account
-            if (typeof $ !== 'undefined' && $.fn.persianDatepicker) {
-                $(`#account-startDate-${accountId}`).persianDatepicker({
-                    format: 'YYYY/MM/DD',
-                    persianDigit: false,
-                    autoClose: true,
-                    initialValue: false,
-                    toolbox: {
-                        calendarSwitch: { enabled: false },
-                        todayButton: { enabled: true, text: { fa: 'امروز' } },
-                        submitButton: { enabled: true, text: { fa: 'تایید' } }
-                    },
-                    dayPicker: { enabled: true },
-                    monthPicker: { enabled: true },
-                    yearPicker: { enabled: true },
-                    responsive: true
-                });
-            }
-        }
-
-        // Remove an account card
-        function removeAccount(accountId) {
-            const card = document.getElementById(`account-${accountId}`);
-            if (card) {
-                card.remove();
-            }
-        }
-
-        // Validate IBAN (24 digits)
-        function validateIban(input) {
-            const value = input.value.replace(/\D/g, '');
-            input.value = value;
-            if (value.length !== 24) {
-                input.style.borderColor = 'var(--color-error)';
+            if (success) {
+                resultIcon.className = 'result-icon success';
+                resultIcon.textContent = '✓';
+                resultTitle.textContent = 'ثبت‌نام با موفقیت انجام شد';
             } else {
-                input.style.borderColor = 'var(--color-border)';
+                resultIcon.className = 'result-icon error';
+                resultIcon.textContent = '✕';
+                resultTitle.textContent = 'خطا در ثبت‌نام';
             }
+
+            resultMessage.textContent = message || '';
+
+            if (trackingCode) {
+                trackingSection.style.display = 'block';
+                trackingCodeEl.textContent = trackingCode;
+            } else {
+                trackingSection.style.display = 'none';
+            }
+
+            showPanel('resultPanel');
         }
 
-        // Collect account data from cards
-        function collectAccountData() {
-            const cards = document.querySelectorAll('.account-card');
-            const accounts = [];
-
-            cards.forEach(card => {
-                const id = card.id.replace('account-', '');
-                const iban = document.getElementById(`account-iban-${id}`).value;
-                const startDate = persianToEnglishDigits(document.getElementById(`account-startDate-${id}`).value);
-
-                accounts.push({ iban, startDate });
-            });
-
-            return accounts;
-        }
-
-        // Submit bank accounts
-        async function submitBankAccounts() {
-            const accounts = collectAccountData();
-
-            // Validate accounts
-            if (accounts.length === 0) {
-                showStatus('لطفاً حداقل یک حساب بانکی اضافه کنید', 'error');
-                return;
-            }
-
-            // Validate each account
-            for (let i = 0; i < accounts.length; i++) {
-                const a = accounts[i];
-                if (!a.iban || a.iban.length !== 24) {
-                    showStatus(`شماره شبا حساب ${toPersianNum(i + 1)} نامعتبر است (باید ۲۴ رقم باشد)`, 'error');
-                    return;
-                }
-                if (!a.startDate) {
-                    showStatus(`تاریخ شروع حساب ${toPersianNum(i + 1)} را انتخاب کنید`, 'error');
-                    return;
-                }
-            }
-
-            const accountsBtn = document.getElementById('accountsBtn');
-            accountsBtn.disabled = true;
-            showStatus('در حال ثبت حساب‌های بانکی...', 'loading');
-            stepState.setActive(7);
-
-            try {
-                const response = await fetch('/api/register/sheba/submit', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ accounts: accounts })
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    stepState.setCompleted(7);
-                    showStatus(data.message || 'حساب‌های بانکی با موفقیت ثبت شدند', 'success');
-                    // Hide accounts section and show geo location section
-                    document.getElementById('accountsSection').style.display = 'none';
-                    document.getElementById('geoLocationSection').style.display = 'block';
-                } else {
-                    stepState.setError(7, data.error || 'ثبت ناموفق');
-                    showStatus('خطا: ' + (data.error || 'ثبت ناموفق'), 'error');
-                    accountsBtn.disabled = false;
-                }
-            } catch (error) {
-                stepState.setError(7, error.message);
-                showStatus('خطا: ' + error.message, 'error');
-                accountsBtn.disabled = false;
-            }
-        }
-
-        // =====================
-        // INTA CODE MANAGEMENT (Step 5)
-        // =====================
-
-        // Search INTA codes by keyword
-        async function searchINTACodes() {
-            const keyword = document.getElementById('intaSearchKeyword').value.trim();
-            const resultsDiv = document.getElementById('intaSearchResults');
-
-            if (keyword.length < 3) {
-                showStatus('کلمه کلیدی باید حداقل ۳ حرف باشد', 'error');
-                return;
-            }
-
-            resultsDiv.innerHTML = '<div style="padding: 12px; text-align: center; color: #6b7280;">در حال جستجو...</div>';
-            resultsDiv.style.display = 'block';
-
-            try {
-                const response = await fetch(`/api/register/inta-code/search?q=${encodeURIComponent(keyword)}`);
-                const data = await response.json();
-
-                if (data.success && data.data && data.data.results && data.data.results.length > 0) {
-                    resultsDiv.innerHTML = data.data.results.map(r => `
-                        <div class="search-result-item" onclick="selectINTAFromSearch('${r.code}', '${escapeHtml(r.fullPath)}')"
-                             style="padding: 12px; border-bottom: 1px solid #e5e7eb; cursor: pointer; transition: background 0.2s;"
-                             onmouseover="this.style.background='#f0f9ff'" onmouseout="this.style.background='white'">
-                            <span style="font-weight: bold; color: #0369a1;">[${r.code}]</span>
-                            <span style="color: #374151; margin-right: 8px;">${escapeHtml(r.fullPath)}</span>
-                        </div>
-                    `).join('');
-                } else {
-                    resultsDiv.innerHTML = '<div style="padding: 12px; text-align: center; color: #6b7280;">نتیجه‌ای یافت نشد</div>';
-                }
-            } catch (error) {
-                resultsDiv.innerHTML = `<div style="padding: 12px; text-align: center; color: #dc2626;">خطا: ${error.message}</div>`;
-            }
-        }
-
-        // Escape HTML to prevent XSS
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        // Select INTA code from search results
-        function selectINTAFromSearch(code, fullPath) {
-            // Add a new INTA code card with the selected code
-            intaCodeCounter++;
-            const intaId = intaCodeCounter;
-            const intaCodeList = document.getElementById('intaCodeList');
-
-            const card = document.createElement('div');
-            card.className = 'partner-card';
-            card.id = `inta-${intaId}`;
-            card.innerHTML = `
-                <div class="card-header">
-                    <span class="card-title">کد فعالیت ${toPersianNum(intaId)}</span>
-                    <button type="button" class="btn-remove" onclick="removeIntaCode(${intaId})">حذف</button>
-                </div>
-                <div class="card-row">
-                    <div class="form-group">
-                        <label>کد فعالیت انتخاب شده</label>
-                        <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: var(--radius-sm); padding: 12px;">
-                            <strong style="color: #166534;">[${code}]</strong>
-                            <span style="color: #15803d; margin-right: 8px;">${fullPath}</span>
-                        </div>
-                        <input type="hidden" id="inta-code-${intaId}" value="${code}">
-                        <input type="hidden" id="inta-fullpath-${intaId}" value="${fullPath}">
-                    </div>
-                    <div class="form-group small">
-                        <label>درصد <span style="color: var(--color-error);">*</span></label>
-                        <input type="number" id="inta-percent-${intaId}"
-                               placeholder="۰" min="1" max="100"
-                               style="direction: ltr; text-align: center;"
-                               onchange="updateIntaCodeTotal()">
-                    </div>
-                </div>
-                <div class="card-row">
-                    <div class="form-group">
-                        <label>شرح فعالیت <span style="color: var(--color-error);">*</span></label>
-                        <input type="text" id="inta-desc-${intaId}"
-                               placeholder="توضیحات فعالیت"
-                               style="direction: rtl; text-align: right;">
-                    </div>
-                </div>
+        // Start new registration
+        function startNew() {
+            // Reset form
+            document.getElementById('postalCode').value = '';
+            document.getElementById('businessName').value = '';
+            document.getElementById('shebaNumber').value = '';
+            document.getElementById('partnersTableBody').innerHTML = `
+                <tr>
+                    <td><input type="text" class="partner-national-id" maxlength="10" placeholder="۱۲۳۴۵۶۷۸۹۰"></td>
+                    <td><input type="number" class="partner-share" min="1" max="100" placeholder="۵۰"></td>
+                    <td>
+                        <select class="partner-role">
+                            <option value="شریک">شریک</option>
+                            <option value="مدیر">مدیر</option>
+                        </select>
+                    </td>
+                    <td><button type="button" class="remove-partner-btn" onclick="removePartner(this)">حذف</button></td>
+                </tr>
             `;
 
-            intaCodeList.appendChild(card);
-            updateIntaCodeTotal();
-
-            // Hide search results and clear search input
-            document.getElementById('intaSearchResults').style.display = 'none';
-            document.getElementById('intaSearchKeyword').value = '';
-            showStatus(`کد فعالیت [${code}] اضافه شد`, 'success');
-        }
-
-        // Add a new INTA code card with cascade dropdowns
-        function addIntaCode() {
-            intaCodeCounter++;
-            const intaId = intaCodeCounter;
-            const intaCodeList = document.getElementById('intaCodeList');
-
-            const card = document.createElement('div');
-            card.className = 'partner-card';
-            card.id = `inta-${intaId}`;
-            card.innerHTML = `
-                <div class="card-header">
-                    <span class="card-title">کد فعالیت ${toPersianNum(intaId)}</span>
-                    <button type="button" class="btn-remove" onclick="removeIntaCode(${intaId})">حذف</button>
-                </div>
-                <div class="card-row">
-                    <div class="form-group">
-                        <label>نوع فعالیت (سطح ۱) <span style="color: var(--color-error);">*</span></label>
-                        <select id="inta-level1-${intaId}" onchange="loadINTALevel2(${intaId})">
-                            <option value="" disabled selected>انتخاب کنید...</option>
-                            <option value="1">[۱] تولید</option>
-                            <option value="2">[۲] بازرگانی</option>
-                            <option value="3">[۳] خدمات</option>
-                        </select>
-                    </div>
-                    <div class="form-group small">
-                        <label>درصد <span style="color: var(--color-error);">*</span></label>
-                        <input type="number" id="inta-percent-${intaId}"
-                               placeholder="۰" min="1" max="100"
-                               style="direction: ltr; text-align: center;"
-                               onchange="updateIntaCodeTotal()">
-                    </div>
-                </div>
-                <div class="card-row" id="inta-level2-container-${intaId}" style="display: none;">
-                    <div class="form-group">
-                        <label>زیرمجموعه (سطح ۲)</label>
-                        <select id="inta-level2-${intaId}" onchange="loadINTALevel3(${intaId})" disabled>
-                            <option value="" disabled selected>ابتدا نوع فعالیت را انتخاب کنید</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="card-row" id="inta-level3-container-${intaId}" style="display: none;">
-                    <div class="form-group">
-                        <label>زیرمجموعه (سطح ۳)</label>
-                        <select id="inta-level3-${intaId}" onchange="loadINTALevel4(${intaId})" disabled>
-                            <option value="" disabled selected>ابتدا سطح ۲ را انتخاب کنید</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="card-row" id="inta-code-container-${intaId}" style="display: none;">
-                    <div class="form-group">
-                        <label>کد نهایی</label>
-                        <select id="inta-code-${intaId}" disabled>
-                            <option value="" disabled selected>ابتدا سطح ۳ را انتخاب کنید</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="card-row">
-                    <div class="form-group">
-                        <label>شرح فعالیت <span style="color: var(--color-error);">*</span></label>
-                        <input type="text" id="inta-desc-${intaId}"
-                               placeholder="توضیحات فعالیت"
-                               style="direction: rtl; text-align: right;">
-                    </div>
-                </div>
-            `;
-
-            intaCodeList.appendChild(card);
-            updateIntaCodeTotal();
-        }
-
-        // Load Level 2 options based on Level 1 selection
-        async function loadINTALevel2(intaId) {
-            const level1 = document.getElementById(`inta-level1-${intaId}`).value;
-            if (!level1) return;
-
-            const level2Select = document.getElementById(`inta-level2-${intaId}`);
-            const level2Container = document.getElementById(`inta-level2-container-${intaId}`);
-
-            level2Select.innerHTML = '<option value="" disabled selected>در حال بارگذاری...</option>';
-            level2Container.style.display = 'block';
-
-            try {
-                const response = await fetch(`/api/register/inta-code/cascade?level=2&parents=${level1}`);
-                const data = await response.json();
-
-                if (data.success && data.data && data.data.options && data.data.options.length > 0) {
-                    level2Select.innerHTML = '<option value="" disabled selected>انتخاب کنید...</option>' +
-                        data.data.options.map(opt => `<option value="${opt.value}">${opt.label}</option>`).join('');
-                    level2Select.disabled = false;
-                } else {
-                    level2Select.innerHTML = '<option value="" disabled selected>موردی یافت نشد</option>';
-                }
-            } catch (error) {
-                level2Select.innerHTML = '<option value="" disabled selected>خطا در بارگذاری</option>';
-            }
-
-            // Reset lower levels
-            document.getElementById(`inta-level3-container-${intaId}`).style.display = 'none';
-            document.getElementById(`inta-code-container-${intaId}`).style.display = 'none';
-        }
-
-        // Load Level 3 options
-        async function loadINTALevel3(intaId) {
-            const level1 = document.getElementById(`inta-level1-${intaId}`).value;
-            const level2 = document.getElementById(`inta-level2-${intaId}`).value;
-            if (!level2) return;
-
-            const level3Select = document.getElementById(`inta-level3-${intaId}`);
-            const level3Container = document.getElementById(`inta-level3-container-${intaId}`);
-
-            level3Select.innerHTML = '<option value="" disabled selected>در حال بارگذاری...</option>';
-            level3Container.style.display = 'block';
-
-            try {
-                const response = await fetch(`/api/register/inta-code/cascade?level=3&parents=${level1},${level2}`);
-                const data = await response.json();
-
-                if (data.success && data.data && data.data.options && data.data.options.length > 0) {
-                    level3Select.innerHTML = '<option value="" disabled selected>انتخاب کنید...</option>' +
-                        data.data.options.map(opt => `<option value="${opt.value}">${opt.label}</option>`).join('');
-                    level3Select.disabled = false;
-                } else {
-                    level3Select.innerHTML = '<option value="" disabled selected>موردی یافت نشد</option>';
-                }
-            } catch (error) {
-                level3Select.innerHTML = '<option value="" disabled selected>خطا در بارگذاری</option>';
-            }
-
-            // Reset lower level
-            document.getElementById(`inta-code-container-${intaId}`).style.display = 'none';
-        }
-
-        // Load Level 4 (final code) options
-        async function loadINTALevel4(intaId) {
-            const level1 = document.getElementById(`inta-level1-${intaId}`).value;
-            const level2 = document.getElementById(`inta-level2-${intaId}`).value;
-            const level3 = document.getElementById(`inta-level3-${intaId}`).value;
-            if (!level3) return;
-
-            const codeSelect = document.getElementById(`inta-code-${intaId}`);
-            const codeContainer = document.getElementById(`inta-code-container-${intaId}`);
-
-            codeSelect.innerHTML = '<option value="" disabled selected>در حال بارگذاری...</option>';
-            codeContainer.style.display = 'block';
-
-            try {
-                const response = await fetch(`/api/register/inta-code/cascade?level=4&parents=${level1},${level2},${level3}`);
-                const data = await response.json();
-
-                if (data.success && data.data && data.data.options && data.data.options.length > 0) {
-                    codeSelect.innerHTML = '<option value="" disabled selected>انتخاب کنید...</option>' +
-                        data.data.options.map(opt => `<option value="${opt.value}">${opt.label}</option>`).join('');
-                    codeSelect.disabled = false;
-                } else {
-                    codeSelect.innerHTML = '<option value="" disabled selected>موردی یافت نشد</option>';
-                }
-            } catch (error) {
-                codeSelect.innerHTML = '<option value="" disabled selected>خطا در بارگذاری</option>';
-            }
-        }
-
-        // Remove an INTA code card
-        function removeIntaCode(intaId) {
-            const card = document.getElementById(`inta-${intaId}`);
-            if (card) {
-                card.remove();
-                updateIntaCodeTotal();
-            }
-        }
-
-        // Update INTA code total display
-        function updateIntaCodeTotal() {
-            const cards = document.querySelectorAll('#intaCodeList .partner-card');
-            let total = 0;
-
-            cards.forEach(card => {
-                const percentInput = card.querySelector('input[type="number"]');
-                if (percentInput && percentInput.value) {
-                    total += parseInt(percentInput.value, 10) || 0;
-                }
+            // Reset progress
+            document.querySelectorAll('.progress-step').forEach(step => {
+                step.classList.remove('completed', 'active', 'error');
             });
+            document.getElementById('progressFill').style.width = '0%';
 
-            const totalElement = document.getElementById('intaCodeTotalValue');
-            const containerElement = document.getElementById('intaCodeTotal');
-
-            totalElement.textContent = toPersianNum(total);
-
-            // Update styling based on total
-            containerElement.classList.remove('error', 'success');
-            if (total === 100) {
-                containerElement.classList.add('success');
-            } else if (total > 100) {
-                containerElement.classList.add('error');
-            }
+            // Go back to registration
+            showPanel('registrationPanel');
         }
-
-        // Collect INTA code data from cards
-        function collectIntaCodeData() {
-            const cards = document.querySelectorAll('#intaCodeList .partner-card');
-            const intaCodes = [];
-
-            cards.forEach(card => {
-                const id = card.id.replace('inta-', '');
-
-                // Get code - either from hidden input (search) or select (cascade)
-                let code = '';
-                const hiddenCode = document.getElementById(`inta-code-${id}`);
-                if (hiddenCode) {
-                    code = hiddenCode.value;
-                }
-
-                // Get fullpath if available (from search)
-                const fullpathInput = document.getElementById(`inta-fullpath-${id}`);
-                const fullpath = fullpathInput ? fullpathInput.value : '';
-
-                // Get levels for cascade selection
-                const levels = [];
-                const level1 = document.getElementById(`inta-level1-${id}`);
-                if (level1 && level1.value) {
-                    levels.push({ level: 1, value: level1.value, label: level1.options[level1.selectedIndex].text });
-                }
-                const level2 = document.getElementById(`inta-level2-${id}`);
-                if (level2 && level2.value && !level2.disabled) {
-                    levels.push({ level: 2, value: level2.value, label: level2.options[level2.selectedIndex].text });
-                }
-                const level3 = document.getElementById(`inta-level3-${id}`);
-                if (level3 && level3.value && !level3.disabled) {
-                    levels.push({ level: 3, value: level3.value, label: level3.options[level3.selectedIndex].text });
-                }
-
-                const percent = parseInt(document.getElementById(`inta-percent-${id}`).value, 10) || 0;
-                const description = document.getElementById(`inta-desc-${id}`).value;
-
-                intaCodes.push({ code, fullpath, levels, percent, description });
-            });
-
-            return intaCodes;
-        }
-
-        // Submit INTA codes
-        async function submitIntaCodes() {
-            const intaCodes = collectIntaCodeData();
-
-            // Validate INTA codes
-            if (intaCodes.length === 0) {
-                showStatus('لطفاً حداقل یک کد فعالیت اضافه کنید', 'error');
-                return;
-            }
-
-            // Validate percentage total
-            const totalPercent = intaCodes.reduce((sum, i) => sum + i.percent, 0);
-            if (totalPercent !== 100) {
-                showStatus('مجموع درصد فعالیت‌ها باید ۱۰۰٪ باشد', 'error');
-                return;
-            }
-
-            // Validate each INTA code
-            for (let i = 0; i < intaCodes.length; i++) {
-                const ic = intaCodes[i];
-                // Check if code was selected (either from search or cascade)
-                if (!ic.code && (!ic.levels || ic.levels.length === 0)) {
-                    showStatus(`لطفاً کد فعالیت ${toPersianNum(i + 1)} را انتخاب کنید`, 'error');
-                    return;
-                }
-                if (!ic.description) {
-                    showStatus(`شرح فعالیت ${toPersianNum(i + 1)} را وارد کنید`, 'error');
-                    return;
-                }
-            }
-
-            const intaCodeBtn = document.getElementById('intaCodeBtn');
-            intaCodeBtn.disabled = true;
-            showStatus('در حال ثبت اینتاکد...', 'loading');
-            stepState.setActive(5);
-
-            try {
-                // Map frontend intaCodes to backend activities structure
-                const activities = intaCodes.map(ic => ({
-                    levels: ic.levels || [],
-                    code: ic.code || '',
-                    description: ic.description,
-                    percent: ic.percent
-                }));
-
-                const response = await fetch('/api/register/inta-code/activities', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ activities: activities })
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    stepState.setCompleted(5);
-                    showStatus(data.message || 'اینتاکد با موفقیت ثبت شد', 'success');
-                    // Hide INTA code section and show VAT status section
-                    document.getElementById('intaCodeSection').style.display = 'none';
-                    document.getElementById('vatStatusSection').style.display = 'block';
-                    // Initialize VAT date picker
-                    initVatDatePicker();
-                } else {
-                    stepState.setError(5, data.error || 'ثبت ناموفق');
-                    showStatus('خطا: ' + (data.error || 'ثبت ناموفق'), 'error');
-                    intaCodeBtn.disabled = false;
-                }
-            } catch (error) {
-                stepState.setError(5, error.message);
-                showStatus('خطا: ' + error.message, 'error');
-                intaCodeBtn.disabled = false;
-            }
-        }
-
-        // =====================
-        // VAT STATUS MANAGEMENT (Step 6)
-        // =====================
-
-        // Initialize Persian date picker for VAT eligibility date
-        function initVatDatePicker() {
-            if (typeof $ !== 'undefined' && $.fn.persianDatepicker) {
-                $('#vatEligibilityDate').persianDatepicker({
-                    format: 'YYYY/MM/DD',
-                    persianDigit: false,
-                    autoClose: true,
-                    initialValue: false,
-                    toolbox: {
-                        calendarSwitch: { enabled: false },
-                        todayButton: { enabled: true, text: { fa: 'امروز' } },
-                        submitButton: { enabled: true, text: { fa: 'تایید' } }
-                    },
-                    dayPicker: { enabled: true },
-                    monthPicker: { enabled: true },
-                    yearPicker: { enabled: true },
-                    responsive: true
-                });
-            }
-        }
-
-        // VAT status form submission
-        document.getElementById('vatStatusForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            const vatStatusBtn = document.getElementById('vatStatusBtn');
-            vatStatusBtn.disabled = true;
-            showStatus('در حال ثبت وضعیت ارزش افزوده...', 'loading');
-            stepState.setActive(6);
-
-            const formData = {
-                eligibilityStatus: document.getElementById('vatEligibilityStatus').value,
-                firstStageType: document.getElementById('vatFirstStageType').value,
-                eligibilityDate: persianToEnglishDigits(document.getElementById('vatEligibilityDate').value),
-                salesAmount: document.getElementById('salesAmount').value
-            };
-
-            try {
-                const response = await fetch('/api/register/vat-status/submit', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(formData)
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    stepState.setCompleted(6);
-                    showStatus(data.message || 'وضعیت ارزش افزوده با موفقیت ثبت شد', 'success');
-                    // Hide VAT status section and show accounts section
-                    document.getElementById('vatStatusSection').style.display = 'none';
-                    document.getElementById('accountsSection').style.display = 'block';
-                    // Add first account card
-                    addAccount();
-                } else {
-                    stepState.setError(6, data.error || 'ثبت ناموفق');
-                    showStatus('خطا: ' + (data.error || 'ثبت ناموفق'), 'error');
-                    vatStatusBtn.disabled = false;
-                }
-            } catch (error) {
-                stepState.setError(6, error.message);
-                showStatus('خطا: ' + error.message, 'error');
-                vatStatusBtn.disabled = false;
-            }
-        });
-
-        // =====================
-        // GEO LOCATION MANAGEMENT (Step 8)
-        // =====================
-
-        // Geo location form submission
-        document.getElementById('geoLocationForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            const latitude = document.getElementById('latitude').value;
-            const longitude = document.getElementById('longitude').value;
-
-            // Basic validation
-            if (!latitude || !longitude) {
-                showStatus('لطفاً مختصات جغرافیایی را وارد کنید', 'error');
-                return;
-            }
-
-            // Validate coordinate ranges
-            const lat = parseFloat(latitude);
-            const lng = parseFloat(longitude);
-            if (isNaN(lat) || lat < -90 || lat > 90) {
-                showStatus('عرض جغرافیایی باید بین -۹۰ و ۹۰ باشد', 'error');
-                return;
-            }
-            if (isNaN(lng) || lng < -180 || lng > 180) {
-                showStatus('طول جغرافیایی باید بین -۱۸۰ و ۱۸۰ باشد', 'error');
-                return;
-            }
-
-            const geoLocationBtn = document.getElementById('geoLocationBtn');
-            geoLocationBtn.disabled = true;
-            showStatus('در حال ثبت موقعیت جغرافیایی...', 'loading');
-            stepState.setActive(8);
-
-            try {
-                const response = await fetch('/api/register/geo-location/submit', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ latitude: lat, longitude: lng })
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    stepState.setCompleted(8);
-                    showStatus(data.message || 'موقعیت جغرافیایی با موفقیت ثبت شد', 'success');
-                    // Hide geo location section and show final confirmation section
-                    document.getElementById('geoLocationSection').style.display = 'none';
-                    document.getElementById('finalConfirmSection').style.display = 'block';
-                    // Populate summary and enable confirmation
-                    populateConfirmationSummary();
-                } else {
-                    stepState.setError(8, data.error || 'ثبت ناموفق');
-                    showStatus('خطا: ' + (data.error || 'ثبت ناموفق'), 'error');
-                    geoLocationBtn.disabled = false;
-                }
-            } catch (error) {
-                stepState.setError(8, error.message);
-                showStatus('خطا: ' + error.message, 'error');
-                geoLocationBtn.disabled = false;
-            }
-        });
-
-        // =====================
-        // FINAL CONFIRMATION (Step 9)
-        // =====================
-
-        // Populate confirmation summary
-        function populateConfirmationSummary() {
-            const summaryContent = document.getElementById('summaryContent');
-            summaryContent.innerHTML = `
-                <p>✓ اطلاعات پایه ثبت‌نام تکمیل شده</p>
-                <p>✓ اطلاعات اعضاء و شرکاء ثبت شده</p>
-                <p>✓ اینتاکد فعالیت تعیین شده</p>
-                <p>✓ وضعیت مشمولیت ارزش افزوده مشخص شده</p>
-                <p>✓ حساب‌های تجاری ثبت شده</p>
-                <p>✓ موقعیت جغرافیایی ثبت شده</p>
-            `;
-        }
-
-        // Enable/disable final confirm button based on checkbox
-        document.getElementById('confirmAccuracy').addEventListener('change', (e) => {
-            document.getElementById('finalConfirmBtn').disabled = !e.target.checked;
-        });
-
-        // Submit final confirmation
-        async function submitFinalConfirmation() {
-            const confirmCheckbox = document.getElementById('confirmAccuracy');
-            if (!confirmCheckbox.checked) {
-                showStatus('لطفاً صحت اطلاعات را تأیید کنید', 'error');
-                return;
-            }
-
-            const finalConfirmBtn = document.getElementById('finalConfirmBtn');
-            finalConfirmBtn.disabled = true;
-            showStatus('در حال ارسال تأیید نهایی...', 'loading');
-            stepState.setActive(9);
-
-            try {
-                const response = await fetch('/api/register/final-confirm', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ confirmed: true })
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    stepState.setCompleted(9);
-                    showStatus(data.message || 'ثبت‌نام با موفقیت تکمیل شد!', 'success');
-                    // Show completion message
-                    document.getElementById('finalConfirmSection').innerHTML = `
-                        <div style="text-align: center; padding: 40px 20px;">
-                            <div style="font-size: 48px; margin-bottom: 16px;">✅</div>
-                            <h2 style="color: var(--color-success); margin-bottom: 8px;">ثبت‌نام تکمیل شد</h2>
-                            <p style="color: var(--color-text-secondary);">پرونده مالیاتی شما با موفقیت ایجاد شد.</p>
-                            <p style="color: var(--color-text-secondary); margin-top: 12px;">
-                                می‌توانید از طریق سامانه my.tax.gov.ir وضعیت پرونده را پیگیری کنید.
-                            </p>
-                        </div>
-                    `;
-                } else {
-                    stepState.setError(9, data.error || 'ثبت ناموفق');
-                    showStatus('خطا: ' + (data.error || 'ثبت ناموفق'), 'error');
-                    finalConfirmBtn.disabled = false;
-                    confirmCheckbox.checked = false;
-                }
-            } catch (error) {
-                stepState.setError(9, error.message);
-                showStatus('خطا: ' + error.message, 'error');
-                finalConfirmBtn.disabled = false;
-                confirmCheckbox.checked = false;
-            }
-        }
-
-        // Toggle progress tracker collapse
-        document.getElementById('progressHeader').addEventListener('click', () => {
-            document.getElementById('progressTracker').classList.toggle('collapsed');
-        });
-
-        window.addEventListener('load', () => {
-            stepState.init();
-            startRedirectTracker();
-            initOtpInputs();
-        });
     </script>
 </body>
 

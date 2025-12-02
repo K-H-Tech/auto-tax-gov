@@ -285,3 +285,49 @@ form_options:
     - value: "government_property"
       label: "Government Property"
       label_fa: "ملک دولتی"
+
+# Default values for tax registration forms (happy path)
+# These values will be used when user doesn't provide input
+defaults:
+  # Basic Info form defaults (PublicData page)
+  basic_info:
+    registration_reason: "ایجاد یک کسب و کار جدید"
+    activity_type: "تجاری (همچنین فعالیتهای معاف از مالیات)"
+    eight_category_job: "سایر (گروه دوم و سوم)"
+    individual_job: "سایر (غیر انفرادی)"
+    professional_guild: "اتاق بازرگانی،صنایع و معادن و کشاورزی ایران"
+    professional_assembly: "اتاق بازرگانی،صنایع و معادن و کشاورزی ایران"
+    guild_union: "کسب و کاراینترنتی"
+    new_guild_union: "اتاق بازرگانی،صنایع،معادن و کشاورزی (کرمانشاه-کرمانشاه) - كرمانشاه"
+    business_license: "فعلا فاقد جواز کسب می باشم و در درست اقدام قرار دارد"
+    ownership_type: "اجاری"
+    financial_day_start: "1"
+    financial_month_start: "1"
+
+  # Member/Partner form defaults
+  member:
+    person_type: "حقیقی"
+    nationality: "33"  # Iran country code
+    birth_country: "33"
+    national_card_type: "کارت ملی هوشمند جدید"
+    partnership_type: "اختیاری (مستقیم)"
+    is_employed: "بله"
+    signature_authority: "ندارد"
+    responsibility_type: "هیچ کدام"
+    position: "شریک"
+    end_date: "0"  # 0 means ongoing/no end date
+
+  # INTA Code form defaults
+  # Path: [3] خدمات → [11] خدمات امور اداری... → [0] خدمات → [3110310]
+  inta_code:
+    level1: "[3] خدمات"
+    level2: "[11] خدمات امور اداری، حقوقی، حسابداری، کارشناسی، تحقیقاتی و رایانه ای"
+    level3: "[0] خدمات"
+    level4: "[3110310] [حقیقی/حقوقی] ارائه خدمات رایانه ای نظیر مشاوره، تهیه نقشه، طرح و یا اجرا و پشتیبانی سیستمهای رایانه ای"
+    code: "3110310"
+    description: "ارائه خدمات رایانه ای و مشاوره فناوری اطلاعات"
+    percent: 100
+
+  # VAT Status defaults
+  vat_status:
+    eligibility_type: "عدم مشمولیت"

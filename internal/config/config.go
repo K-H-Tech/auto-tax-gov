@@ -16,6 +16,61 @@ type Config struct {
 	Services    ServicesConfig    `mapstructure:"services"`
 	Log         LogConfig         `mapstructure:"log"`
 	FormOptions FormOptionsConfig `mapstructure:"form_options"`
+	Defaults    DefaultsConfig    `mapstructure:"defaults"`
+}
+
+// DefaultsConfig holds default values for tax registration forms.
+type DefaultsConfig struct {
+	BasicInfo BasicInfoDefaults `mapstructure:"basic_info"`
+	Member    MemberDefaults    `mapstructure:"member"`
+	INTACode  INTACodeDefaults  `mapstructure:"inta_code"`
+	VATStatus VATStatusDefaults `mapstructure:"vat_status"`
+}
+
+// BasicInfoDefaults holds default values for the Basic Info form (PublicData).
+type BasicInfoDefaults struct {
+	RegistrationReason   string `mapstructure:"registration_reason"`
+	ActivityType         string `mapstructure:"activity_type"`
+	EightCategoryJob     string `mapstructure:"eight_category_job"`
+	IndividualJob        string `mapstructure:"individual_job"`
+	ProfessionalGuild    string `mapstructure:"professional_guild"`
+	ProfessionalAssembly string `mapstructure:"professional_assembly"`
+	GuildUnion           string `mapstructure:"guild_union"`
+	NewGuildUnion        string `mapstructure:"new_guild_union"`
+	BusinessLicense      string `mapstructure:"business_license"`
+	OwnershipType        string `mapstructure:"ownership_type"`
+	FinancialDayStart    string `mapstructure:"financial_day_start"`
+	FinancialMonthStart  string `mapstructure:"financial_month_start"`
+}
+
+// MemberDefaults holds default values for the Member/Partner form.
+type MemberDefaults struct {
+	PersonType         string `mapstructure:"person_type"`
+	Nationality        string `mapstructure:"nationality"`
+	BirthCountry       string `mapstructure:"birth_country"`
+	NationalCardType   string `mapstructure:"national_card_type"`
+	PartnershipType    string `mapstructure:"partnership_type"`
+	IsEmployed         string `mapstructure:"is_employed"`
+	SignatureAuthority string `mapstructure:"signature_authority"`
+	ResponsibilityType string `mapstructure:"responsibility_type"`
+	Position           string `mapstructure:"position"`
+	EndDate            string `mapstructure:"end_date"`
+}
+
+// INTACodeDefaults holds default values for the INTA Code form.
+type INTACodeDefaults struct {
+	Level1      string `mapstructure:"level1"`      // Category: تولید/بازرگانی/خدمات
+	Level2      string `mapstructure:"level2"`      // Subcategory
+	Level3      string `mapstructure:"level3"`      // Sub-subcategory
+	Level4      string `mapstructure:"level4"`      // Final INTA code selection
+	Code        string `mapstructure:"code"`        // 7-digit INTA code (extracted from Level4)
+	Description string `mapstructure:"description"` // Activity description in Persian
+	Percent     int    `mapstructure:"percent"`     // Activity percentage (100 for single activity)
+}
+
+// VATStatusDefaults holds default values for VAT eligibility status.
+type VATStatusDefaults struct {
+	EligibilityType string `mapstructure:"eligibility_type"` // عدم مشمولیت, مشمول مرحله اول, etc.
 }
 
 // ServerConfig holds HTTP server configuration.
@@ -98,6 +153,7 @@ type RegisterTaxConfig struct {
 	MembersEditURL      string `mapstructure:"members_edit_url"`       // Partners/members form (Step 3)
 	AddShebaNumberURL   string `mapstructure:"add_sheba_number_url"`   // Bank accounts form (Step 4)
 	ActivityINTACodeURL string `mapstructure:"activity_inta_code_url"` // INTA code activities form
+	VATStatusURL        string `mapstructure:"vat_status_url"`         // VAT eligibility status form
 }
 
 // LogConfig holds logging configuration.
@@ -221,10 +277,50 @@ func setDefaults() {
 	viper.SetDefault("services.registertax.members_edit_url", "https://register.tax.gov.ir/Pages/Preaction/MembersEdit")
 	viper.SetDefault("services.registertax.add_sheba_number_url", "https://register.tax.gov.ir/Pages/Preaction/Edit/AddShebaNumber/")
 	viper.SetDefault("services.registertax.activity_inta_code_url", "https://register.tax.gov.ir/Pages/Preaction/Edit/ActivityINTACode/")
+	viper.SetDefault("services.registertax.vat_status_url", "https://register.tax.gov.ir/Pages/Preaction/Edit/VatStatus/")
 
 	// Log defaults
 	viper.SetDefault("log.level", "info")
 	viper.SetDefault("log.format", "text")
+
+	// Defaults for tax registration forms (happy path)
+	// Basic Info defaults - values match exact dropdown options from register.tax.gov.ir
+	viper.SetDefault("defaults.basic_info.registration_reason", "ایجاد یک کسب و کار جدید")
+	viper.SetDefault("defaults.basic_info.activity_type", "تجاری (همچنین فعالیتهای معاف از مالیات)")
+	viper.SetDefault("defaults.basic_info.eight_category_job", "سایر (گروه دوم و سوم)")
+	viper.SetDefault("defaults.basic_info.individual_job", "سایر (غیر انفرادی)")
+	viper.SetDefault("defaults.basic_info.professional_guild", "اتاق بازرگانی،صنایع و معادن و کشاورزی ایران")
+	viper.SetDefault("defaults.basic_info.professional_assembly", "اتاق بازرگانی،صنایع و معادن و کشاورزی ایران")
+	viper.SetDefault("defaults.basic_info.guild_union", "کسب و کاراینترنتی")
+	viper.SetDefault("defaults.basic_info.new_guild_union", "اتاق بازرگانی،صنایع،معادن و کشاورزی (کرمانشاه-کرمانشاه) - كرمانشاه")
+	viper.SetDefault("defaults.basic_info.business_license", "فعلا فاقد جواز کسب می باشم و در درست اقدام قرار دارد")
+	viper.SetDefault("defaults.basic_info.ownership_type", "اجاری") // Must match actual dropdown: ملکی, سرقفلی, اجاری, وقفی
+	viper.SetDefault("defaults.basic_info.financial_day_start", "1")
+	viper.SetDefault("defaults.basic_info.financial_month_start", "1")
+
+	// Member defaults
+	viper.SetDefault("defaults.member.person_type", "حقیقی")
+	viper.SetDefault("defaults.member.nationality", "33") // Iran
+	viper.SetDefault("defaults.member.birth_country", "33")
+	viper.SetDefault("defaults.member.national_card_type", "کارت ملی هوشمند جدید")
+	viper.SetDefault("defaults.member.partnership_type", "اختیاری (مستقیم)")
+	viper.SetDefault("defaults.member.is_employed", "بله")
+	viper.SetDefault("defaults.member.signature_authority", "ندارد")
+	viper.SetDefault("defaults.member.responsibility_type", "هیچ کدام")
+	viper.SetDefault("defaults.member.position", "شریک")
+	viper.SetDefault("defaults.member.end_date", "0") // Ongoing
+
+	// INTA Code defaults - cascade levels and final code
+	viper.SetDefault("defaults.inta_code.level1", "[3] خدمات")
+	viper.SetDefault("defaults.inta_code.level2", "[11] خدمات امور اداری، حقوقی، حسابداری، کارشناسی، تحقیقاتی و رایانه ای")
+	viper.SetDefault("defaults.inta_code.level3", "[0] خدمات")
+	viper.SetDefault("defaults.inta_code.level4", "[3110310] [حقیقی/حقوقی] ارائه خدمات رایانه ای نظیر مشاوره، تهیه نقشه، طرح و یا اجرا و پشتیبانی سیستمهای رایانه ای")
+	viper.SetDefault("defaults.inta_code.code", "3110310")
+	viper.SetDefault("defaults.inta_code.description", "ارائه خدمات رایانه ای و مشاوره فناوری اطلاعات")
+	viper.SetDefault("defaults.inta_code.percent", 100)
+
+	// VAT Status defaults
+	viper.SetDefault("defaults.vat_status.eligibility_type", "عدم مشمولیت")
 }
 
 // GetLogLevel returns the slog level from config.

@@ -42,6 +42,7 @@ func New(cfg *config.Config, logger *slog.Logger, webDir string) *Server {
 	mux.HandleFunc("/api/access-dashboard", h.HandleAccessDashboard)
 	mux.HandleFunc("/api/start-tax-file", h.HandleStartTaxFile)
 	mux.HandleFunc("/api/form-options", h.HandleGetFormOptions)
+	mux.HandleFunc("/api/defaults", h.HandleGetDefaults)
 	mux.HandleFunc("/api/submit-basic-info", h.HandleSubmitBasicInfo)
 	mux.HandleFunc("/api/submit-partners", h.HandleSubmitPartners)
 	mux.HandleFunc("/api/submit-bank-accounts", h.HandleSubmitBankAccounts)
@@ -74,6 +75,9 @@ func New(cfg *config.Config, logger *slog.Logger, webDir string) *Server {
 	mux.HandleFunc("/api/register/sheba/submit", h.HandleSubmitShebaNumber)
 	mux.HandleFunc("/api/register/sheba/list", h.HandleGetShebaList)
 	mux.HandleFunc("/api/register/sheba/delete", h.HandleDeleteSheba)
+
+	// Complete automated registration (single endpoint)
+	mux.HandleFunc("/api/register/complete", h.HandleCompleteRegistration)
 
 	server := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Server.Port),

@@ -364,6 +364,39 @@ func (h *Handler) HandleSubmitBasicInfo(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	// Apply defaults for fields not provided by user
+	defaults := h.cfg.Defaults.BasicInfo
+	if req.RegistrationReason == "" {
+		req.RegistrationReason = defaults.RegistrationReason
+	}
+	if req.ActivityType == "" {
+		req.ActivityType = defaults.ActivityType
+	}
+	if req.StartDate == "" || req.StartDate == "1xxx/xx/xx" {
+		req.StartDate = taxregister.GetCurrentJalaliDate()
+	}
+	if req.EightCategoryJob == "" || req.EightCategoryJob == "نامشخص" {
+		req.EightCategoryJob = defaults.EightCategoryJob
+	}
+	if req.ProfessionalGuild == "" {
+		req.ProfessionalGuild = defaults.ProfessionalGuild
+	}
+	if req.ProfessionalAssembly == "" {
+		req.ProfessionalAssembly = defaults.ProfessionalAssembly
+	}
+	if req.GuildUnion == "" {
+		req.GuildUnion = defaults.GuildUnion
+	}
+	if req.NewGuildUnion == "" {
+		req.NewGuildUnion = defaults.NewGuildUnion
+	}
+	if req.BusinessLicense == "" {
+		req.BusinessLicense = defaults.BusinessLicense
+	}
+	if req.OwnershipType == "" || req.OwnershipType == "نامشخص" {
+		req.OwnershipType = defaults.OwnershipType
+	}
+
 	h.logger.Info("submitting basic info", "unitTitle", req.UnitTitle)
 
 	if !h.session.IsActive() {
@@ -915,11 +948,36 @@ func (h *Handler) HandleSubmitMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate required fields
+	// Apply defaults for fields not provided by user
+	taxregister.ApplyMemberDefaults(&req, h.cfg.Defaults.Member)
+
+	// Validate required fields (these must be provided by user, no defaults)
 	if req.NationalID == "" || req.Mobile == "" || req.PostalCode == "" {
 		json.NewEncoder(w).Encode(models.APIResponse{
 			Success: false,
 			Error:   "کد ملی، موبایل و کد پستی الزامی هستند",
+		})
+		return
+	}
+	// Additional required fields for happy path
+	if req.BirthDate == "" || req.BirthDate == "1xxx/xx/xx" {
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   "تاریخ تولد الزامی است",
+		})
+		return
+	}
+	if req.NationalCardSerial == "" {
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   "سریال پشت کارت ملی الزامی است",
+		})
+		return
+	}
+	if req.SharePercent == "" {
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   "درصد سهام الزامی است",
 		})
 		return
 	}
@@ -1050,6 +1108,16 @@ func (h *Handler) HandleSearchINTACodes(w http.ResponseWriter, r *http.Request) 
 
 	h.logger.Info("Searching INTA codes", "keyword", keyword)
 
+	// Re-authenticate to register.tax.gov.ir before search (session may have expired)
+	if err := h.mytax.AuthenticateToRegisterTax(h.session); err != nil {
+		h.logger.Error("Failed to authenticate to register.tax.gov.ir", "error", err)
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   "خطا در احراز هویت به سامانه ثبت‌نام مالیاتی",
+		})
+		return
+	}
+
 	results, err := h.taxregister.SearchINTACodes(h.session, keyword)
 	if err != nil {
 		h.logger.Error("SearchINTACodes failed", "error", err)
@@ -1087,6 +1155,16 @@ func (h *Handler) HandleGetINTACodeForm(w http.ResponseWriter, r *http.Request) 
 	}
 
 	h.logger.Info("Fetching INTA code form")
+
+	// Re-authenticate to register.tax.gov.ir before fetching form (session may have expired)
+	if err := h.mytax.AuthenticateToRegisterTax(h.session); err != nil {
+		h.logger.Error("Failed to authenticate to register.tax.gov.ir", "error", err)
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   "خطا در احراز هویت به سامانه ثبت‌نام مالیاتی",
+		})
+		return
+	}
 
 	form, err := h.taxregister.GetINTACodeForm(h.session)
 	if err != nil {
@@ -1143,6 +1221,16 @@ func (h *Handler) HandleGetINTACascadeOptions(w http.ResponseWriter, r *http.Req
 	}
 
 	h.logger.Info("Fetching INTA cascade options", "level", level, "parents", parents)
+
+	// Re-authenticate to register.tax.gov.ir before fetching options (session may have expired)
+	if err := h.mytax.AuthenticateToRegisterTax(h.session); err != nil {
+		h.logger.Error("Failed to authenticate to register.tax.gov.ir", "error", err)
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   "خطا در احراز هویت به سامانه ثبت‌نام مالیاتی",
+		})
+		return
+	}
 
 	options, err := h.taxregister.GetINTACodeOptions(h.session, level, parents)
 	if err != nil {
@@ -1544,5 +1632,198 @@ func (h *Handler) HandleDeleteMember(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(models.APIResponse{
 		Success: true,
 		Message: "عضو با موفقیت حذف شد",
+	})
+}
+
+// ==================== Complete Registration API ====================
+
+// HandleCompleteRegistration executes the entire registration process automatically.
+// User provides only essential PII data; all dropdown/selective values use config defaults.
+// POST /api/register/complete
+func (h *Handler) HandleCompleteRegistration(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	var req taxregister.CompleteRegistrationRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   "درخواست نامعتبر است",
+		})
+		return
+	}
+
+	// Validate required fields
+	if req.PostalCode == "" {
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   "کد پستی الزامی است",
+		})
+		return
+	}
+	if len(req.PostalCode) != 10 {
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   "کد پستی باید ۱۰ رقم باشد",
+		})
+		return
+	}
+
+	if req.BusinessName == "" {
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   "عنوان واحد/شهرت کسبی الزامی است",
+		})
+		return
+	}
+
+	if req.RegistrationType != "individual" && req.RegistrationType != "partnership" {
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   "نوع ثبت‌نام باید individual یا partnership باشد",
+		})
+		return
+	}
+
+	if req.ShebaNumber == "" {
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   "شماره شبا الزامی است",
+		})
+		return
+	}
+	// Clean and validate SHEBA
+	sheba := strings.TrimPrefix(strings.TrimPrefix(req.ShebaNumber, "IR"), "ir")
+	if len(sheba) != 24 {
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   "شماره شبا باید ۲۴ رقم باشد (بدون IR)",
+		})
+		return
+	}
+	req.ShebaNumber = sheba
+
+	// Validate partnership data
+	if req.RegistrationType == "partnership" {
+		if len(req.Partners) == 0 {
+			json.NewEncoder(w).Encode(models.APIResponse{
+				Success: false,
+				Error:   "برای ثبت‌نام مشارکتی حداقل یک شریک الزامی است",
+			})
+			return
+		}
+
+		// Validate partner share percentages sum to 100
+		totalShare := 0
+		for _, p := range req.Partners {
+			if p.NationalID == "" || len(p.NationalID) != 10 {
+				json.NewEncoder(w).Encode(models.APIResponse{
+					Success: false,
+					Error:   "کد ملی شریک باید ۱۰ رقم باشد",
+				})
+				return
+			}
+			if p.SharePercent <= 0 || p.SharePercent > 100 {
+				json.NewEncoder(w).Encode(models.APIResponse{
+					Success: false,
+					Error:   "درصد سهم شریک باید بین ۱ تا ۱۰۰ باشد",
+				})
+				return
+			}
+			totalShare += p.SharePercent
+		}
+		if totalShare != 100 {
+			json.NewEncoder(w).Encode(models.APIResponse{
+				Success: false,
+				Error:   "مجموع درصد سهام شرکا باید ۱۰۰٪ باشد",
+			})
+			return
+		}
+	}
+
+	h.logger.Info("Starting complete registration",
+		"postalCode", req.PostalCode,
+		"businessName", req.BusinessName,
+		"type", req.RegistrationType)
+
+	if !h.session.IsAuthenticated() {
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   "نشست احراز هویت نشده. لطفاً ابتدا وارد شوید.",
+		})
+		return
+	}
+
+	result, err := h.taxregister.ExecuteCompleteRegistration(h.session, &req)
+	if err != nil {
+		h.logger.Error("Complete registration failed", "error", err)
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   err.Error(),
+			Data:    result, // Include partial results for debugging
+		})
+		return
+	}
+
+	json.NewEncoder(w).Encode(models.APIResponse{
+		Success: true,
+		Message: result.Message,
+		Data:    result,
+	})
+}
+
+// ==================== Defaults API ====================
+
+// HandleGetDefaults returns the configured default values for forms.
+// GET /api/defaults
+func (h *Handler) HandleGetDefaults(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	// Return all defaults from config
+	defaults := map[string]interface{}{
+		"basicInfo": map[string]interface{}{
+			"registrationReason":   h.cfg.Defaults.BasicInfo.RegistrationReason,
+			"activityType":         h.cfg.Defaults.BasicInfo.ActivityType,
+			"startDate":            taxregister.GetCurrentJalaliDate(),
+			"eightCategoryJob":     h.cfg.Defaults.BasicInfo.EightCategoryJob,
+			"individualJob":        h.cfg.Defaults.BasicInfo.IndividualJob,
+			"professionalGuild":    h.cfg.Defaults.BasicInfo.ProfessionalGuild,
+			"professionalAssembly": h.cfg.Defaults.BasicInfo.ProfessionalAssembly,
+			"guildUnion":           h.cfg.Defaults.BasicInfo.GuildUnion,
+			"businessLicense":      h.cfg.Defaults.BasicInfo.BusinessLicense,
+			"ownershipType":        h.cfg.Defaults.BasicInfo.OwnershipType,
+		},
+		"member": map[string]interface{}{
+			"personType":         h.cfg.Defaults.Member.PersonType,
+			"nationality":        h.cfg.Defaults.Member.Nationality,
+			"birthCountry":       h.cfg.Defaults.Member.BirthCountry,
+			"nationalCardType":   h.cfg.Defaults.Member.NationalCardType,
+			"membershipType":     h.cfg.Defaults.Member.PartnershipType,
+			"isResponsible":      h.cfg.Defaults.Member.IsEmployed,
+			"signatureAuthority": h.cfg.Defaults.Member.SignatureAuthority,
+			"responsibilityType": h.cfg.Defaults.Member.ResponsibilityType,
+			"position":           h.cfg.Defaults.Member.Position,
+			"startDate":          taxregister.GetCurrentJalaliDate(),
+			"endDate":            h.cfg.Defaults.Member.EndDate,
+		},
+		"intaCode": map[string]interface{}{
+			"code":        h.cfg.Defaults.INTACode.Code,
+			"description": h.cfg.Defaults.INTACode.Description,
+			"percent":     h.cfg.Defaults.INTACode.Percent,
+		},
+	}
+
+	json.NewEncoder(w).Encode(models.APIResponse{
+		Success: true,
+		Data:    defaults,
 	})
 }

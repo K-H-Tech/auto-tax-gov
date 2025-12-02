@@ -93,8 +93,9 @@ type BasicInfoRequest struct {
 	EightCategoryJob     string `json:"eightCategoryJob"`     // مشاغل هشتگانه
 	IndividualJob        string `json:"individualJob"`        // مشاغل انفرادی
 	ProfessionalGuild    string `json:"professionalGuild"`    // مجامع صنفی
-	ProfessionalAssembly string `json:"professionalAssembly"` // مجامع صنفی (dropdown)
-	GuildUnion           string `json:"guildUnion"`           // اتحادیه صنفی
+	ProfessionalAssembly string `json:"professionalAssembly"` // مجامع حرفه‌ای/تشکل های صنفی (searchable dropdown)
+	GuildUnion           string `json:"guildUnion"`           // اتحادیه صنفی ذیربط (searchable dropdown)
+	NewGuildUnion        string `json:"newGuildUnion"`        // اتحادیه صنفی جدید (cascading dropdown)
 	BusinessLicense      string `json:"businessLicense"`      // پروانه کسب
 	OwnershipType        string `json:"ownershipType"`        // نوع مالکیت
 	Website              string `json:"website,omitempty"`    // پایگاه اینترنتی (optional)
