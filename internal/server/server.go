@@ -78,6 +78,7 @@ func New(cfg *config.Config, logger *slog.Logger, webDir string) *Server {
 
 	// Complete automated registration (single endpoint)
 	mux.HandleFunc("/api/register/complete", h.HandleCompleteRegistration)
+	mux.HandleFunc("/api/register/recover", h.HandleRecoverRegistration)
 
 	server := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Server.Port),

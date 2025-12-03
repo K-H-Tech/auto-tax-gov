@@ -1776,6 +1776,62 @@ func (h *Handler) HandleCompleteRegistration(w http.ResponseWriter, r *http.Requ
 	})
 }
 
+// HandleRecoverRegistration recovers a deleted registration using the UndoDelete endpoint.
+// POST /api/register/recover
+func (h *Handler) HandleRecoverRegistration(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	var req struct {
+		GUID string `json:"guid"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   "Invalid request body",
+		})
+		return
+	}
+
+	if req.GUID == "" {
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   "GUID is required",
+		})
+		return
+	}
+
+	h.logger.Info("Recover registration request", "guid", req.GUID)
+
+	if !h.session.IsAuthenticated() {
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   "نشست احراز هویت نشده. لطفاً ابتدا وارد شوید.",
+		})
+		return
+	}
+
+	result, err := h.taxregister.RecoverRegistration(h.session, req.GUID)
+	if err != nil {
+		h.logger.Error("Registration recovery failed", "error", err, "guid", req.GUID)
+		json.NewEncoder(w).Encode(models.APIResponse{
+			Success: false,
+			Error:   err.Error(),
+		})
+		return
+	}
+
+	json.NewEncoder(w).Encode(models.APIResponse{
+		Success: true,
+		Message: "ثبت‌نام با موفقیت بازیابی شد",
+		Data:    result,
+	})
+}
+
 // ==================== Defaults API ====================
 
 // HandleGetDefaults returns the configured default values for forms.

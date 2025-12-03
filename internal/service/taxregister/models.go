@@ -286,9 +286,13 @@ type ShebaSubmitRequest struct {
 
 // PartnerInput represents partner data from the frontend.
 type PartnerInput struct {
-	NationalID   string `json:"nationalId"`   // کد ملی (10 رقم)
-	SharePercent int    `json:"sharePercent"` // درصد سهم
-	Role         string `json:"role"`         // مدیر/شریک
+	NationalID         string `json:"nationalId"`                   // کد ملی (10 رقم)
+	SharePercent       int    `json:"sharePercent"`                 // درصد سهم
+	Role               string `json:"role,omitempty"`               // مدیر/شریک
+	BirthDate          string `json:"birthDate"`                    // تاریخ تولد (1370/01/01)
+	NationalCardSerial string `json:"nationalCardSerial,omitempty"` // سریال کارت ملی
+	PostalCode         string `json:"postalCode"`                   // کد پستی (10 رقم)
+	Mobile             string `json:"mobile"`                       // شماره موبایل (11 رقم)
 }
 
 // CompleteRegistrationRequest is the unified request for automated registration.

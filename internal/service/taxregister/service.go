@@ -18,6 +18,14 @@ import (
 // uuidPattern matches UUID in URLs and responses.
 var uuidPattern = regexp.MustCompile(`[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}`)
 
+// isErrorRedirect checks if a redirect location points to an error page.
+// The portal returns HTTP 302 to /Pages/Error/ when form validation fails.
+func isErrorRedirect(location string) bool {
+	return strings.Contains(location, "/Pages/Error/") ||
+		strings.Contains(location, "/Error/") ||
+		strings.Contains(strings.ToLower(location), "error")
+}
+
 // Service handles the complete 11-step tax registration flow.
 type Service struct {
 	cfg    *config.Config
@@ -108,6 +116,72 @@ func (s *Service) NewRegistration(sess *session.Session, req *RegistrationReques
 	s.logger.Info("Step 1 complete: Registration created", "guid", result.GUID)
 
 	return &result, nil
+}
+
+// RecoverRegistration recovers a deleted registration using the UndoDelete endpoint.
+// This is needed when a registration with the same postal code/national ID already exists.
+// GET https://my.tax.gov.ir/Page/UndoDelete/{guid}
+func (s *Service) RecoverRegistration(sess *session.Session, guid string) (*RegistrationResponse, error) {
+	if !sess.IsAuthenticated() {
+		return nil, fmt.Errorf("session not authenticated")
+	}
+
+	undoURL := fmt.Sprintf("%s/Page/UndoDelete/%s", s.cfg.Services.MyTax.BaseURL, guid)
+
+	s.logger.Info("RecoverRegistration: Recovering deleted registration",
+		"guid", guid,
+		"url", undoURL)
+
+	req, err := http.NewRequest("GET", undoURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("error creating recovery request: %w", err)
+	}
+
+	s.client.SetCommonHeaders(req)
+	s.client.AddCookies(req, sess.GetCookies())
+
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("error executing recovery request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Save cookies
+	if cookies := resp.Cookies(); len(cookies) > 0 {
+		sess.MergeCookies(cookies)
+	}
+
+	// Check for redirect (success indicator)
+	if resp.StatusCode >= 300 && resp.StatusCode < 400 {
+		location := resp.Header.Get("Location")
+		s.logger.Info("RecoverRegistration: Redirected after recovery", "location", location)
+	}
+
+	// Read response body to check for errors
+	body, err := client.ReadResponseBody(resp)
+	if err != nil {
+		s.logger.Warn("RecoverRegistration: Could not read response body", "error", err)
+	}
+
+	// Check if response indicates an error
+	if resp.StatusCode != 200 && resp.StatusCode < 300 {
+		return nil, fmt.Errorf("recovery request failed with status %d", resp.StatusCode)
+	}
+
+	// Check for error content in body
+	if strings.Contains(string(body), "خطا") {
+		return nil, fmt.Errorf("recovery failed: response contains error")
+	}
+
+	sess.SetRegistrationID(guid)
+
+	s.logger.Info("RecoverRegistration: Registration recovered successfully", "guid", guid)
+
+	return &RegistrationResponse{
+		Success: true,
+		GUID:    guid,
+		Message: "Registration recovered successfully",
+	}, nil
 }
 
 // Step 2: GetSSOUrl fetches the SSO redirect URL for cross-domain authentication.
@@ -463,6 +537,7 @@ func (s *Service) SubmitPublicData(sess *session.Session, form *PublicDataForm, 
 		"ctl00$CPC$TextBoxFinantialStartDate": data.FinancialStartDate,
 		"ctl00$CPC$TextBoxPDName":             data.BusinessName,
 		"ctl00$CPC$DDLGroupOneTypes":          data.GroupOneType,
+		"ctl00$CPC$DDLEnferadiTypes":          HappyPathDefaults.EnferadiTypes, // "1000" = سایر (غیر انفرادی)
 		"ctl00$CPC$DDLPDLegalType":            data.LegalType,
 		"ctl00$CPC$DDLPDNewLegalGroup":        data.NewLegalGroup,
 		"ctl00$CPC$DDLPDNewLegalType":         data.NewLegalType,
@@ -470,6 +545,10 @@ func (s *Service) SubmitPublicData(sess *session.Session, form *PublicDataForm, 
 		"ctl00$CPC$DDLPDOwnership":            data.Ownership,
 		"ctl00$CPC$DDLFinantialDayStart":      data.FinancialDayStart,
 		"ctl00$CPC$DDLFinantialMonthStart":    data.FinancialMonthStart,
+
+		// Financial audit fields (mandatory for non-commercial activities)
+		"ctl00$CPC$DDLFinantialSoratMali":    "2", // خیر
+		"ctl00$CPC$DDLFinantialGozareshMali": "2", // خیر
 
 		// Hidden fields
 		"ctl00$CPC$HFGUID": form.GUID,
@@ -534,6 +613,10 @@ func (s *Service) SubmitPublicData(sess *session.Session, form *PublicDataForm, 
 	if resp.StatusCode >= 300 && resp.StatusCode < 400 {
 		location := resp.Header.Get("Location")
 		s.logger.Info("Steps 9-10: Form submission redirected", "location", location)
+		// Check if redirect is to error page
+		if isErrorRedirect(location) {
+			return fmt.Errorf("form submission failed - redirected to error page: %s", location)
+		}
 		return nil
 	}
 
@@ -775,6 +858,12 @@ func (s *Service) SubmitMember(sess *session.Session, form *MembersFormData, req
 	if resp.StatusCode >= 300 && resp.StatusCode < 400 {
 		location := resp.Header.Get("Location")
 		s.logger.Info("SubmitMember: Redirected after submission", "location", location)
+		// Check if redirect is to error page
+		if isErrorRedirect(location) {
+			result.Success = false
+			result.Message = fmt.Sprintf("Member submission failed - redirected to error page: %s", location)
+			return result, fmt.Errorf("member submission failed - redirected to error page: %s", location)
+		}
 		result.Success = true
 		result.Message = "Member submission redirected"
 		return result, nil
@@ -1549,6 +1638,15 @@ func (s *Service) SubmitINTACodes(sess *session.Session, activities []INTAActivi
 			sess.MergeCookies(cookies)
 		}
 
+		// Check for redirect to error page
+		if resp.StatusCode >= 300 && resp.StatusCode < 400 {
+			location := resp.Header.Get("Location")
+			resp.Body.Close()
+			if isErrorRedirect(location) {
+				return fmt.Errorf("activity %d submission failed - redirected to error page: %s", i+1, location)
+			}
+		}
+
 		body, err := client.ReadResponseBody(resp)
 		resp.Body.Close()
 
@@ -1704,6 +1802,10 @@ func (s *Service) SubmitVATStatus(sess *session.Session, req *VATStatusRequest) 
 	if resp.StatusCode >= 300 && resp.StatusCode < 400 {
 		location := resp.Header.Get("Location")
 		s.logger.Info("SubmitVATStatus: Redirected after submission", "location", location)
+		// Check if redirect is to error page
+		if isErrorRedirect(location) {
+			return fmt.Errorf("VAT status submission failed - redirected to error page: %s", location)
+		}
 		return nil
 	}
 
@@ -1806,9 +1908,10 @@ func (s *Service) SubmitSheba(sess *session.Session, req *ShebaSubmitRequest) er
 	payload.Set("__EVENTTARGET", "")
 	payload.Set("__EVENTARGUMENT", "")
 
-	// SHEBA fields - ctl00$CPC$TextboxSheba and ctl00$CPC$TextboxShebaDate
-	payload.Set("ctl00$CPC$TextboxSheba", iban)
-	payload.Set("ctl00$CPC$TextboxShebaDate", req.StartDate)
+	// SHEBA fields - verified via Playwright manual testing
+	// HTML ID: CPC_TextBoxShebaNumber, ASP.NET name: ctl00$CPC$TextBoxShebaNumber
+	payload.Set("ctl00$CPC$TextBoxShebaNumber", iban)
+	payload.Set("ctl00$CPC$TextBoxShebaStartDate", req.StartDate)
 
 	// Submit button
 	payload.Set("ctl00$CPC$ButtonShebaSave", "ثبت")
@@ -1856,6 +1959,10 @@ func (s *Service) SubmitSheba(sess *session.Session, req *ShebaSubmitRequest) er
 	if resp.StatusCode >= 300 && resp.StatusCode < 400 {
 		location := resp.Header.Get("Location")
 		s.logger.Info("SubmitSheba: Redirected after submission", "location", location)
+		// Check if redirect is to error page
+		if isErrorRedirect(location) {
+			return fmt.Errorf("SHEBA submission failed - redirected to error page: %s", location)
+		}
 		return nil
 	}
 
@@ -1900,14 +2007,57 @@ func (s *Service) ExecuteCompleteRegistration(sess *session.Session, req *Comple
 
 	regResp, err := s.NewRegistration(sess, regReq)
 	if err != nil {
+		// Check if it's a duplicate registration error with recovery option
+		errMsg := err.Error()
+		if strings.Contains(errMsg, "قبلا انجام شده است") {
+			// Extract recovery GUID from error message (looks for UndoDelete/{guid} or just a UUID)
+			var recoveryGUID string
+			if matches := uuidPattern.FindStringSubmatch(errMsg); len(matches) > 0 {
+				recoveryGUID = matches[0]
+			}
+
+			if recoveryGUID != "" {
+				s.logger.Info("Duplicate registration detected, attempting auto-recovery",
+					"recoveryGUID", recoveryGUID)
+
+				// Attempt recovery
+				_, recoverErr := s.RecoverRegistration(sess, recoveryGUID)
+				if recoverErr != nil {
+					s.logger.Error("Auto-recovery failed", "error", recoverErr)
+					response.Steps = append(response.Steps, StepResult{
+						Step:    1,
+						Name:    "NewRegistration",
+						Success: false,
+						Message: fmt.Sprintf("Duplicate found but recovery failed: %s", recoverErr.Error()),
+					})
+					return response, fmt.Errorf("step 1 (NewRegistration) failed: duplicate registration exists, recovery failed: %w", recoverErr)
+				}
+
+				// Recovery successful, use the recovered GUID
+				s.logger.Info("Auto-recovery successful, continuing with existing registration", "guid", recoveryGUID)
+				response.Steps = append(response.Steps, StepResult{
+					Step:    1,
+					Name:    "NewRegistration",
+					Success: true,
+					Message: fmt.Sprintf("Recovered existing registration: %s", recoveryGUID),
+				})
+				response.GUID = recoveryGUID
+
+				// Continue to Step 2 with the recovered GUID
+				goto step2
+			}
+		}
+
 		response.Steps = append(response.Steps, StepResult{Step: 1, Name: "NewRegistration", Success: false, Message: err.Error()})
 		return response, fmt.Errorf("step 1 (NewRegistration) failed: %w", err)
 	}
 	response.Steps = append(response.Steps, StepResult{Step: 1, Name: "NewRegistration", Success: true, URL: s.cfg.Services.MyTax.RegistrationURL})
 	response.GUID = regResp.GUID
 
+step2:
+
 	// Step 2: Get SSO URL
-	ssoResp, err := s.GetSSOUrl(sess, regResp.GUID)
+	ssoResp, err := s.GetSSOUrl(sess, response.GUID)
 	if err != nil {
 		response.Steps = append(response.Steps, StepResult{Step: 2, Name: "GetSSOUrl", Success: false, Message: err.Error()})
 		return response, fmt.Errorf("step 2 (GetSSOUrl) failed: %w", err)
@@ -1982,7 +2132,8 @@ func (s *Service) ExecuteCompleteRegistration(sess *session.Session, req *Comple
 	return response, nil
 }
 
-// submitPublicDataWithDefaults submits the PublicData form with config defaults.
+// submitPublicDataWithDefaults submits the PublicData form with happy path defaults.
+// Uses hardcoded values extracted from curl.md that are known to work.
 func (s *Service) submitPublicDataWithDefaults(sess *session.Session, businessName string) error {
 	// Get the form
 	form, err := s.GetPublicDataForm(sess)
@@ -1990,47 +2141,52 @@ func (s *Service) submitPublicDataWithDefaults(sess *session.Session, businessNa
 		return fmt.Errorf("failed to get PublicData form: %w", err)
 	}
 
-	defaults := s.cfg.Defaults.BasicInfo
+	// Use happy path defaults (hardcoded values that work)
+	publicData := GetHappyPathPublicData(businessName)
 
-	// Build request with defaults
-	publicData := &PublicDataRequest{
-		RegistrationCause:   defaults.RegistrationReason,
-		IsTejari:            defaults.ActivityType,
-		FinancialStartDate:  GetCurrentJalaliDate(),
-		BusinessName:        businessName,
-		GroupOneType:        defaults.EightCategoryJob,
-		LegalType:           defaults.ProfessionalAssembly,
-		NewLegalGroup:       defaults.GuildUnion,
-		NewLegalType:        defaults.NewGuildUnion,
-		HasJobLicense:       defaults.BusinessLicense,
-		Ownership:           defaults.OwnershipType,
-		FinancialDayStart:   defaults.FinancialDayStart,
-		FinancialMonthStart: defaults.FinancialMonthStart,
-	}
+	s.logger.Info("Submitting PublicData with happy path defaults",
+		"registrationCause", publicData.RegistrationCause,
+		"isTejari", publicData.IsTejari,
+		"groupOneType", publicData.GroupOneType,
+		"legalType", publicData.LegalType,
+		"newLegalGroup", publicData.NewLegalGroup,
+		"hasJobLicense", publicData.HasJobLicense,
+		"ownership", publicData.Ownership)
 
 	return s.SubmitPublicData(sess, form, publicData)
 }
 
-// submitINTACodeWithDefaults submits INTA code with config defaults.
+// submitINTACodeWithDefaults submits INTA code with happy path defaults.
+// Uses hardcoded values extracted from curl.md that are known to work.
 func (s *Service) submitINTACodeWithDefaults(sess *session.Session) error {
-	defaults := s.cfg.Defaults.INTACode
+	// Use happy path defaults (hardcoded values that work)
+	activity := GetHappyPathINTACode()
 
-	activity := INTAActivity{
-		Code:        defaults.Code,
-		Description: defaults.Description,
-		Percent:     defaults.Percent,
+	s.logger.Info("Submitting INTA code with happy path defaults",
+		"code", activity.Code,
+		"description", activity.Description,
+		"percent", activity.Percent)
+
+	// Step 1: Search for the INTA code first to populate the search results
+	// This is required because the submit uses LB{code} which only exists after search
+	_, err := s.SearchINTACodes(sess, activity.Description)
+	if err != nil {
+		s.logger.Warn("INTA code search failed, continuing anyway", "error", err)
+		// Continue anyway - the code might already be in the form from a previous search
 	}
 
+	// Step 2: Submit the activity
 	return s.SubmitINTACodes(sess, []INTAActivity{activity})
 }
 
-// submitVATStatusWithDefaults submits VAT status with config defaults.
+// submitVATStatusWithDefaults submits VAT status with happy path defaults.
+// Uses hardcoded values extracted from curl.md that are known to work.
 func (s *Service) submitVATStatusWithDefaults(sess *session.Session) error {
-	defaults := s.cfg.Defaults.VATStatus
+	// Use happy path defaults (hardcoded values that work)
+	req := GetHappyPathVATStatus()
 
-	req := &VATStatusRequest{
-		EligibilityType: defaults.EligibilityType,
-	}
+	s.logger.Info("Submitting VAT status with happy path defaults",
+		"eligibilityType", req.EligibilityType)
 
 	return s.SubmitVATStatus(sess, req)
 }
@@ -2063,11 +2219,13 @@ func (s *Service) submitPartnersWithDefaults(sess *session.Session, partners []P
 			EventValidation:    form.EventValidation,
 
 			// Identity
-			PersonType:       defaults.PersonType,
-			Nationality:      defaults.Nationality,
-			NationalID:       partner.NationalID,
-			BirthCountry:     defaults.BirthCountry,
-			NationalCardType: defaults.NationalCardType,
+			PersonType:         defaults.PersonType,
+			Nationality:        defaults.Nationality,
+			NationalID:         partner.NationalID,
+			BirthDate:          partner.BirthDate, // Required: from frontend
+			BirthCountry:       defaults.BirthCountry,
+			NationalCardType:   defaults.NationalCardType,
+			NationalCardSerial: partner.NationalCardSerial, // Required: from frontend
 
 			// Financial
 			MembershipType:     defaults.PartnershipType,
@@ -2078,6 +2236,10 @@ func (s *Service) submitPartnersWithDefaults(sess *session.Session, partners []P
 			Position:           position,
 			StartDate:          GetCurrentJalaliDate(),
 			EndDate:            defaults.EndDate,
+
+			// Contact
+			PostalCode: partner.PostalCode, // Required: from frontend
+			Mobile:     partner.Mobile,     // Required: from frontend
 		}
 
 		_, err = s.SubmitMember(sess, form, memberReq)

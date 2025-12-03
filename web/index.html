@@ -151,6 +151,46 @@
             color: #a0a0a0;
         }
 
+        /* OTP Input */
+        .otp-container {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            direction: ltr;
+            margin-top: 8px;
+        }
+
+        .otp-input {
+            width: 52px;
+            height: 56px;
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-md);
+            font-family: inherit;
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--color-text);
+            background: var(--color-surface);
+            text-align: center;
+            padding: 0;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .otp-input:focus {
+            outline: none;
+            border-color: var(--color-border-focus);
+            box-shadow: 0 0 0 3px rgba(26, 26, 26, 0.08);
+        }
+
+        .otp-input.filled {
+            border-color: var(--color-border-focus);
+            background: #fafafa;
+        }
+
+        .otp-input.error {
+            border-color: var(--color-error);
+            box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+        }
+
         /* Captcha */
         .captcha-container {
             display: flex;
@@ -559,7 +599,7 @@
 
                 <div class="form-group">
                     <label for="mobile">شماره موبایل</label>
-                    <input type="tel" id="mobile" placeholder="۰۹۱۲۳۴۵۶۷۸۹" dir="ltr" style="text-align: right;">
+                    <input type="tel" id="mobile" placeholder="09123456789" pattern="09[0-9]{9}" inputmode="numeric" dir="ltr" style="text-align: left;">
                 </div>
 
                 <button class="btn btn-primary" id="sendOtpBtn" onclick="sendOTP()">
@@ -570,8 +610,14 @@
             <!-- Step 2: OTP -->
             <div id="otpStep" style="display: none;">
                 <div class="form-group">
-                    <label for="otpCode">کد تایید پیامکی</label>
-                    <input type="text" id="otpCode" placeholder="کد ۶ رقمی" maxlength="6" dir="ltr" style="text-align: center; font-size: 24px; letter-spacing: 8px;">
+                    <label>کد تایید پیامکی</label>
+                    <div class="otp-container" role="group">
+                        <input type="text" class="otp-input" data-index="0" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="one-time-code">
+                        <input type="text" class="otp-input" data-index="1" maxlength="1" inputmode="numeric" pattern="[0-9]">
+                        <input type="text" class="otp-input" data-index="2" maxlength="1" inputmode="numeric" pattern="[0-9]">
+                        <input type="text" class="otp-input" data-index="3" maxlength="1" inputmode="numeric" pattern="[0-9]">
+                        <input type="text" class="otp-input" data-index="4" maxlength="1" inputmode="numeric" pattern="[0-9]">
+                    </div>
                 </div>
 
                 <p class="text-muted mb-3" style="text-align: center;">
@@ -731,6 +777,7 @@
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             initCaptcha();
+            initOtpInputs();
         });
 
         // Show/hide panels
@@ -756,7 +803,69 @@
             const alert = document.getElementById('alert');
             alert.textContent = message;
             alert.className = `alert alert-${type} show`;
-            setTimeout(() => alert.classList.remove('show'), 5000);
+            // Scroll to alert
+            alert.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // Keep error alerts visible longer, info/success shorter
+            const timeout = type === 'error' ? 10000 : 5000;
+            setTimeout(() => alert.classList.remove('show'), timeout);
+        }
+
+        // OTP Input Management
+        function initOtpInputs() {
+            const otpInputs = document.querySelectorAll('.otp-input');
+            otpInputs.forEach((input, index) => {
+                input.addEventListener('input', (e) => {
+                    if (!/^\d$/.test(e.target.value)) {
+                        e.target.value = '';
+                        input.classList.remove('filled');
+                        return;
+                    }
+                    input.classList.add('filled');
+                    if (index < 4) {
+                        otpInputs[index + 1].focus();
+                    }
+                });
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Backspace' && !e.target.value && index > 0) {
+                        otpInputs[index - 1].focus();
+                    }
+                });
+                input.addEventListener('paste', (e) => {
+                    e.preventDefault();
+                    const paste = (e.clipboardData || window.clipboardData).getData('text');
+                    const digits = paste.replace(/\D/g, '').slice(0, 5);
+                    digits.split('').forEach((d, i) => {
+                        if (otpInputs[i]) {
+                            otpInputs[i].value = d;
+                            otpInputs[i].classList.add('filled');
+                        }
+                    });
+                    if (digits.length > 0) {
+                        otpInputs[Math.min(digits.length, 4)].focus();
+                    }
+                });
+            });
+        }
+
+        function getOtpValue() {
+            return Array.from(document.querySelectorAll('.otp-input'))
+                .map(input => input.value).join('');
+        }
+
+        function clearOtpInputs() {
+            document.querySelectorAll('.otp-input').forEach(input => {
+                input.value = '';
+                input.classList.remove('filled', 'error');
+            });
+            const first = document.querySelector('.otp-input');
+            if (first) first.focus();
+        }
+
+        function setOtpError() {
+            document.querySelectorAll('.otp-input').forEach(i => i.classList.add('error'));
+            setTimeout(() => {
+                document.querySelectorAll('.otp-input').forEach(i => i.classList.remove('error'));
+            }, 2000);
         }
 
         // Initialize captcha
@@ -769,7 +878,7 @@
                     captchaKey = data.captcha.key;
                     csrfToken = data.captcha.csrfToken;
                     document.getElementById('captchaImage').innerHTML =
-                        `<img src="data:image/png;base64,${data.captcha.imageData}" alt="captcha">`;
+                        `<img src="${data.captcha.imageData}" alt="captcha">`;
                 } else {
                     showAlert(data.error || 'خطا در بارگذاری کپچا');
                 }
@@ -791,7 +900,7 @@
                     captchaKey = data.captcha.key;
                     csrfToken = data.captcha.csrfToken;
                     document.getElementById('captchaImage').innerHTML =
-                        `<img src="data:image/png;base64,${data.captcha.imageData}" alt="captcha">`;
+                        `<img src="${data.captcha.imageData}" alt="captcha">`;
                 } else {
                     showAlert(data.error || 'خطا در بارگذاری کپچا');
                 }
@@ -841,6 +950,9 @@
                     document.getElementById('captchaStep').style.display = 'none';
                     document.getElementById('otpStep').style.display = 'block';
                     showAlert('کد تایید ارسال شد', 'success');
+                    // Focus first OTP input
+                    const firstOtp = document.querySelector('.otp-input');
+                    if (firstOtp) firstOtp.focus();
                 } else {
                     showAlert(data.error || 'خطا در ارسال کد');
                     refreshCaptcha();
@@ -855,10 +967,11 @@
 
         // Verify OTP
         async function verifyOTP() {
-            const otpCode = document.getElementById('otpCode').value.trim();
+            const otpCode = getOtpValue();
 
-            if (!otpCode || otpCode.length !== 6) {
-                showAlert('لطفاً کد ۶ رقمی را وارد کنید');
+            if (!otpCode || otpCode.length !== 5) {
+                showAlert('لطفاً کد ۵ رقمی را وارد کنید');
+                setOtpError();
                 return;
             }
 
@@ -884,9 +997,12 @@
                     showPanel('registrationPanel');
                 } else {
                     showAlert(data.error || 'کد نامعتبر است');
+                    setOtpError();
+                    clearOtpInputs();
                 }
             } catch (err) {
                 showAlert('خطا در اتصال به سرور');
+                setOtpError();
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = 'تایید و ورود';
@@ -898,6 +1014,7 @@
             document.getElementById('captchaStep').style.display = 'block';
             document.getElementById('otpStep').style.display = 'none';
             document.getElementById('captchaCode').value = '';
+            clearOtpInputs();
             refreshCaptcha();
         }
 
@@ -961,25 +1078,62 @@
             return partners;
         }
 
+        // Helper to convert Persian digits to English
+        function persianToEnglish(str) {
+            const persianDigits = '۰۱۲۳۴۵۶۷۸۹';
+            return str.replace(/[۰-۹]/g, d => persianDigits.indexOf(d));
+        }
+
+        // Highlight invalid field
+        function setFieldError(fieldId, hasError) {
+            const field = document.getElementById(fieldId);
+            if (hasError) {
+                field.style.borderColor = 'var(--color-error)';
+                field.style.boxShadow = '0 0 0 3px rgba(220, 38, 38, 0.1)';
+            } else {
+                field.style.borderColor = '';
+                field.style.boxShadow = '';
+            }
+        }
+
         // Submit registration
         async function submitRegistration() {
-            const postalCode = document.getElementById('postalCode').value.trim();
+            console.log('submitRegistration called');
+
+            // Clear previous errors
+            setFieldError('postalCode', false);
+            setFieldError('businessName', false);
+            setFieldError('shebaNumber', false);
+
+            let postalCode = document.getElementById('postalCode').value.trim();
             const businessName = document.getElementById('businessName').value.trim();
-            const shebaNumber = document.getElementById('shebaNumber').value.trim().replace(/^IR/i, '');
+            let shebaNumber = document.getElementById('shebaNumber').value.trim().replace(/^IR/i, '');
+
+            // Convert Persian digits to English
+            postalCode = persianToEnglish(postalCode);
+            shebaNumber = persianToEnglish(shebaNumber);
+
+            console.log('Values:', { postalCode, businessName, shebaNumber, lengths: { postal: postalCode.length, sheba: shebaNumber.length } });
 
             // Validation
             if (!postalCode || postalCode.length !== 10) {
-                showAlert('کد پستی باید ۱۰ رقم باشد');
+                showAlert('کد پستی باید ۱۰ رقم باشد (وارد شده: ' + postalCode.length + ' رقم)');
+                setFieldError('postalCode', true);
+                document.getElementById('postalCode').focus();
                 return;
             }
 
             if (!businessName) {
                 showAlert('عنوان واحد الزامی است');
+                setFieldError('businessName', true);
+                document.getElementById('businessName').focus();
                 return;
             }
 
             if (!shebaNumber || shebaNumber.length !== 24) {
-                showAlert('شماره شبا باید ۲۴ رقم باشد (بدون IR)');
+                showAlert('شماره شبا باید ۲۴ رقم باشد (بدون IR) - وارد شده: ' + shebaNumber.length + ' رقم');
+                setFieldError('shebaNumber', true);
+                document.getElementById('shebaNumber').focus();
                 return;
             }
 
@@ -998,6 +1152,11 @@
                 }
             }
 
+            // Disable button and show loading
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner"></span> در حال پردازش...';
+
             // Show progress panel
             showPanel('progressPanel');
 
@@ -1006,6 +1165,7 @@
             const progressFill = document.getElementById('progressFill');
 
             try {
+                console.log('Making API call with data:', { postalCode, businessName, registrationType, shebaNumber, partners });
                 const response = await fetch('/api/register/complete', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1019,6 +1179,7 @@
                 });
 
                 const data = await response.json();
+                console.log('API response:', data);
 
                 // Update progress based on response
                 if (data.data && data.data.steps) {
@@ -1040,7 +1201,12 @@
                 }, 500);
 
             } catch (err) {
-                showResult(false, 'خطا در اتصال به سرور');
+                console.error('API Error:', err);
+                showResult(false, 'خطا در اتصال به سرور: ' + err.message);
+            } finally {
+                // Re-enable button
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'ثبت‌نام خودکار';
             }
         }
 
