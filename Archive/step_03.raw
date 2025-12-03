@@ -1,0 +1,31 @@
+GET https://register.tax.gov.ir/Pages/Login/TokenLoginProcessWithSignout/97736aa3-f72b-4095-b4e8-c1cdf33131c0 HTTP/1.1
+host: register.tax.gov.ir
+Connection: keep-alive
+sec-ch-ua: "Chromium";v="142", "Google Chrome";v="142", "Not_A Brand";v="99"
+sec-ch-ua-mobile: ?0
+sec-ch-ua-platform: "macOS"
+Upgrade-Insecure-Requests: 1
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
+Sec-Fetch-Site: same-site
+Sec-Fetch-Mode: navigate
+Sec-Fetch-User: ?1
+Sec-Fetch-Dest: document
+Referer: https://my.tax.gov.ir/
+Accept-Language: en-US,en;q=0.9,fa;q=0.8,ar;q=0.7
+Cookie: TaxpayerToken=eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2Q0JDLUhTNTEyIiwidHlwIjoiSldUIn0..v1fXa5Rc6Drwz_wcQT2Rvg.2yNmO4HWX-a28UFDXDMF0fbZn8XhItV8H-hO5BOn7nisBbHaYUU7fjET2VXkBZo3z9CzO-iqBettLpQIdOzqc7mxlJYjCtVea-u1-VLysKpEGBXD9MrpbPmK-pqxb5ZGvtq7yGqK_xjY45s8iLTFrnNJywdlN2rJiJWMxEFYq6TR_gGuICKCpUTBU2UFdd9-6JophYB4RikuVoQdkzozDF0PHXNCL8aDLyrzclkoq8Q3VkrKkPOOTbdCIUWc-EPm5xnfzrp64y1mQ-jaJYXFehu5zYdTVfbwotLqi-wCKladivYe1tKSjNVTvuHyEwUPhbXjzyzSuMXM8PHTVJlNVblXAT0_ELlWEXdcHk6VqYU.vOqFNKZYaryUPjB5pYzBFdwPYGFnDRvBa70sQe4g8j0
+
+HTTP/1.1 302 Found
+Cache-Control: no-cache
+Pragma: no-cache
+Content-Type: text/html; charset=utf-8
+Expires: -1
+Location: /Pages/prelogin/TokenPreLoginProcess/97736AA3-F72B-4095-B4E8-C1CDF33131C0
+Set-Cookie: ASP.NET_SessionId=xxted1e4cihknzsbvuutllmz; path=/; HttpOnly; SameSite=Strict
+Date: Sat, 29 Nov 2025 10:14:29 GMT
+Content-Length: 190
+Set-Cookie: cookiesession1=678B7719FD3A37A0F70252446F3BC0D4;Expires=Sun, 29 Nov 2026 10:14:31 GMT;Path=/;HttpOnly
+
+<html><head><title>Object moved</title></head><body>
+<h2>Object moved to <a href="/Pages/prelogin/TokenPreLoginProcess/97736AA3-F72B-4095-B4E8-C1CDF33131C0">here</a>.</h2>
+</body></html>

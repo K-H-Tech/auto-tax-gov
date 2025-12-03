@@ -1,0 +1,32 @@
+POST https://my.tax.gov.ir/Page/NewRegistration/ HTTP/1.1
+host: my.tax.gov.ir
+Connection: keep-alive
+Content-Length: 168
+sec-ch-ua-platform: "macOS"
+X-Requested-With: XMLHttpRequest
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+Accept: */*
+sec-ch-ua: "Chromium";v="142", "Google Chrome";v="142", "Not_A Brand";v="99"
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+sec-ch-ua-mobile: ?0
+Origin: https://my.tax.gov.ir
+Sec-Fetch-Site: same-origin
+Sec-Fetch-Mode: cors
+Sec-Fetch-Dest: empty
+Referer: https://my.tax.gov.ir/Page/Dashboard
+Accept-Language: en-US,en;q=0.9,fa;q=0.8,ar;q=0.7
+Cookie: cookiesession1=678B769FF5ACFF6F327580E72221A699; .MyTax.SessionID=17B10C394ABB29DF87FA2974D03BD4EE92804BC46A5438E2AAE57DE38C038DD2AAB935CA585392351BCCE5D2C56369D28BBB110C23F25F53F4697B162C09660E; MyTaxToken=03b2f0ed-4292-4919-890c-ec8a9879ff89; TaxpayerToken=eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2Q0JDLUhTNTEyIiwidHlwIjoiSldUIn0..v1fXa5Rc6Drwz_wcQT2Rvg.2yNmO4HWX-a28UFDXDMF0fbZn8XhItV8H-hO5BOn7nisBbHaYUU7fjET2VXkBZo3z9CzO-iqBettLpQIdOzqc7mxlJYjCtVea-u1-VLysKpEGBXD9MrpbPmK-pqxb5ZGvtq7yGqK_xjY45s8iLTFrnNJywdlN2rJiJWMxEFYq6TR_gGuICKCpUTBU2UFdd9-6JophYB4RikuVoQdkzozDF0PHXNCL8aDLyrzclkoq8Q3VkrKkPOOTbdCIUWc-EPm5xnfzrp64y1mQ-jaJYXFehu5zYdTVfbwotLqi-wCKladivYe1tKSjNVTvuHyEwUPhbXjzyzSuMXM8PHTVJlNVblXAT0_ELlWEXdcHk6VqYU.vOqFNKZYaryUPjB5pYzBFdwPYGFnDRvBa70sQe4g8j0; .AspNetCore.Mvc.CookieTempDataProvider=CfDJ8P_wEnXRjrBBgfBR4Ppr4J7YZcgjaA2E3NYHsgHtFxVc0-tUwHEGvW9Dki8I1M_-VreQ5x1KSxVnj24ET2g3U6rxeKvR3adqH3ON04oBFXCNDcIom_pYSI7etmy7W_jYGmjBDhcv_4AKl39FUy15dKXhGTlDvzzJXwiBOpby6I4g323_1ymZ0ccA7dU_5Ukeig
+
+NewRegistrationType=Multiple&NewRegistrationPostalCode=1483934943&NewRegistrationBusinessName=%D9%85%D8%B4%D8%A7%D9%88%D8%B1%D9%87+%D8%AD%D9%82%D9%88%D9%82%DB%8C+%DB%B1HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+Server: XXXXXXXXXXXXXXXXXXX
+Content-Security-Policy: frame-ancestors *.tax.gov.ir
+Referrer-Policy: strict-origin-when-cross-origin
+Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
+X-Frame-Options: DENY
+X-XSS-Protection: 0
+X-Powered-By: 
+Date: Sat, 29 Nov 2025 10:14:29 GMT
+content-length: 63
+
+{"isSuccess":true,"msg":"4d797211-6b92-49bf-a39f-71a3e34c115f"}

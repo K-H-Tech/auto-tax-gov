@@ -1,4 +1,4 @@
-# Step 3: 200 
+# Step 3: 200
 
 **Timestamp:** 2025-11-26T16:42:31+03:30
 
@@ -23,7 +23,7 @@ Upgrade-Insecure-Requests: 1
 
 **Status Code:** 200
 
-**Status:** 200 
+**Status:** 200
 
 ### Response Headers
 
@@ -8302,7 +8302,7 @@ o9w+5Od3acH8BXZXrlyOhrO5ccCgFgAgvwj9j8CAgEh/f78TkBuNw8vLe725hUXvyY4ObtWN706j
 ujVz1qx+SYmJhefPn09Wl7KbM3fuVG/vnT8uWDB/0pXLl+/D2QxCBwBlFPpxJPQrxHO6QCPA96Ej
 rl0LvxZx7eK2bVt//ewlESoVj+Ou1bVbN2Mmg8lFwsaCxtOIasiuR6fT/q0bhUJRiQhPkVYZwUvn
 B0eNBCqed1zyv0AgFGL5o2BdnJKSUlpcXIQC88I8JHVxTWm5cPHSqcSEhJRVq1ZuxO916NBBY8aM
-mb0TkxJzgoOCkmqal10Vpe6OpH4ZpA4AgBIK/ci8efOnQU40Debm5kavEhLj7OzsRipDevft27/+
+mb0TkxJzgoOCkmqal10Vpe6OpH4ZpA4AgBIK/ci8efOnQU40Debm5auto-tax-govhLj7OzsRipDevft27/+
 5s3IK0zmf4ciMDIy5sydO6/XhIkTjdSp/LDU8T31iRPtoPe7DFpaWlQajQbBNwAouNAPIKG7QE40
 HaNGjbJ88/ZdgqWllbkip/Obb751evT4cQSKyPWr+1xTU5O6bNlyC2NjYw6Foj7dLObMmeuKpP4e
 SR06yiGcnJzGbfP0nICv5gAAoNhCx4+tuUFONC0eCxdOiI17dm/kyJFmipi+xYu/nvbufUaM9dCh
@@ -9444,9 +9444,9 @@ QgAAAABJRU5ErkJggg=="
               </div>
 
               <div class="w-full text-right pt-2 errors-holder">
-                
-                
-                
+
+
+
               </div>
 
               <button

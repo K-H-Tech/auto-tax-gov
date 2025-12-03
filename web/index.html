@@ -1,0 +1,1275 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ثبت‌نام مالیاتی خودکار</title>
+    <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet"
+        type="text/css" />
+    <style>
+        :root {
+            --color-bg: #f5f5f5;
+            --color-surface: #ffffff;
+            --color-text: #1a1a1a;
+            --color-text-secondary: #666666;
+            --color-border: #e5e5e5;
+            --color-border-focus: #1a1a1a;
+            --color-primary: #1a1a1a;
+            --color-primary-hover: #333333;
+            --color-error: #dc2626;
+            --color-error-bg: #fef2f2;
+            --color-success: #16a34a;
+            --color-success-bg: #f0fdf4;
+            --color-loading: #2563eb;
+            --color-loading-bg: #eff6ff;
+            --radius-lg: 16px;
+            --radius-md: 8px;
+            --radius-sm: 6px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Vazirmatn', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--color-bg);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 24px;
+            line-height: 1.6;
+        }
+
+        .container {
+            background: var(--color-surface);
+            border-radius: var(--radius-lg);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.05);
+            padding: 32px;
+            max-width: 480px;
+            width: 100%;
+        }
+
+        h1 {
+            color: var(--color-text);
+            font-size: 24px;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            color: var(--color-text-secondary);
+            font-size: 14px;
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        /* Phase indicator */
+        .phase-indicator {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .phase {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: var(--radius-sm);
+            background: #f3f4f6;
+            color: #9ca3af;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .phase.active {
+            background: var(--color-loading-bg);
+            color: var(--color-loading);
+        }
+
+        .phase.completed {
+            background: var(--color-success-bg);
+            color: var(--color-success);
+        }
+
+        .phase-number {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
+            background: currentColor;
+            color: white;
+        }
+
+        .phase.active .phase-number,
+        .phase.completed .phase-number {
+            background: currentColor;
+        }
+
+        /* Form elements */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            color: var(--color-text);
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 14px 16px;
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-md);
+            font-size: 15px;
+            font-family: inherit;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            background: white;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--color-border-focus);
+            box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
+        }
+
+        input::placeholder {
+            color: #a0a0a0;
+        }
+
+        /* OTP Input */
+        .otp-container {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            direction: ltr;
+            margin-top: 8px;
+        }
+
+        .otp-input {
+            width: 52px;
+            height: 56px;
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-md);
+            font-family: inherit;
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--color-text);
+            background: var(--color-surface);
+            text-align: center;
+            padding: 0;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .otp-input:focus {
+            outline: none;
+            border-color: var(--color-border-focus);
+            box-shadow: 0 0 0 3px rgba(26, 26, 26, 0.08);
+        }
+
+        .otp-input.filled {
+            border-color: var(--color-border-focus);
+            background: #fafafa;
+        }
+
+        .otp-input.error {
+            border-color: var(--color-error);
+            box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+        }
+
+        /* Captcha */
+        .captcha-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .captcha-image {
+            flex: 1;
+            background: #f8f8f8;
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-md);
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .captcha-image img {
+            max-width: 100%;
+            max-height: 60px;
+        }
+
+        .refresh-btn {
+            width: 44px;
+            height: 44px;
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-md);
+            background: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .refresh-btn:hover {
+            background: #f3f4f6;
+        }
+
+        .refresh-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Buttons */
+        .btn {
+            width: 100%;
+            padding: 14px 24px;
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: 15px;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--color-primary);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: var(--color-primary-hover);
+        }
+
+        .btn-primary:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: white;
+            color: var(--color-text);
+            border: 1px solid var(--color-border);
+        }
+
+        .btn-secondary:hover {
+            background: #f3f4f6;
+        }
+
+        /* Alerts */
+        .alert {
+            padding: 14px 16px;
+            border-radius: var(--radius-md);
+            font-size: 14px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .alert.show {
+            display: block;
+        }
+
+        .alert-error {
+            background: var(--color-error-bg);
+            color: var(--color-error);
+            border: 1px solid rgba(220, 38, 38, 0.2);
+        }
+
+        .alert-success {
+            background: var(--color-success-bg);
+            color: var(--color-success);
+            border: 1px solid rgba(22, 163, 74, 0.2);
+        }
+
+        .alert-info {
+            background: var(--color-loading-bg);
+            color: var(--color-loading);
+            border: 1px solid rgba(37, 99, 235, 0.2);
+        }
+
+        /* Panels */
+        .panel {
+            display: none;
+        }
+
+        .panel.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Registration type toggle */
+        .type-toggle {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .type-option {
+            flex: 1;
+            padding: 16px;
+            border: 2px solid var(--color-border);
+            border-radius: var(--radius-md);
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .type-option:hover {
+            border-color: var(--color-text-secondary);
+        }
+
+        .type-option.selected {
+            border-color: var(--color-primary);
+            background: #f8f8f8;
+        }
+
+        .type-option-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--color-text);
+            margin-bottom: 4px;
+        }
+
+        .type-option-desc {
+            font-size: 12px;
+            color: var(--color-text-secondary);
+        }
+
+        /* Partners table */
+        .partners-section {
+            display: none;
+            margin-bottom: 20px;
+        }
+
+        .partners-section.show {
+            display: block;
+        }
+
+        .partners-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 12px;
+        }
+
+        .partners-table th,
+        .partners-table td {
+            padding: 10px;
+            border: 1px solid var(--color-border);
+            text-align: center;
+            font-size: 13px;
+        }
+
+        .partners-table th {
+            background: #f8f8f8;
+            font-weight: 600;
+        }
+
+        .partners-table input {
+            padding: 8px;
+            font-size: 13px;
+        }
+
+        .partners-table select {
+            padding: 8px;
+            font-size: 13px;
+        }
+
+        .add-partner-btn {
+            padding: 8px 16px;
+            font-size: 13px;
+            width: auto;
+        }
+
+        .remove-partner-btn {
+            background: var(--color-error);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        /* Progress indicator */
+        .progress-container {
+            margin-bottom: 20px;
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: #e5e5e5;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 12px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--color-loading);
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        .progress-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .progress-step {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--color-text-secondary);
+        }
+
+        .progress-step.active {
+            color: var(--color-loading);
+            font-weight: 500;
+        }
+
+        .progress-step.completed {
+            color: var(--color-success);
+        }
+
+        .progress-step-icon {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            background: #e5e5e5;
+            color: white;
+        }
+
+        .progress-step.active .progress-step-icon {
+            background: var(--color-loading);
+        }
+
+        .progress-step.completed .progress-step-icon {
+            background: var(--color-success);
+        }
+
+        /* Result card */
+        .result-card {
+            text-align: center;
+            padding: 24px;
+        }
+
+        .result-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            margin: 0 auto 16px;
+        }
+
+        .result-icon.success {
+            background: var(--color-success-bg);
+            color: var(--color-success);
+        }
+
+        .result-icon.error {
+            background: var(--color-error-bg);
+            color: var(--color-error);
+        }
+
+        .result-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .result-tracking {
+            background: #f8f8f8;
+            padding: 16px;
+            border-radius: var(--radius-md);
+            margin: 16px 0;
+        }
+
+        .result-tracking-label {
+            font-size: 12px;
+            color: var(--color-text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .result-tracking-code {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--color-text);
+            font-family: monospace;
+        }
+
+        /* Spinner */
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid currentColor;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Helpers */
+        .text-muted {
+            color: var(--color-text-secondary);
+            font-size: 13px;
+        }
+
+        .mt-3 { margin-top: 16px; }
+        .mb-3 { margin-bottom: 16px; }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>ثبت‌نام مالیاتی خودکار</h1>
+        <p class="subtitle">ابتدا وارد شوید، سپس اطلاعات را وارد کنید</p>
+
+        <!-- Phase indicator -->
+        <div class="phase-indicator">
+            <div class="phase active" id="phase1">
+                <span class="phase-number">۱</span>
+                <span>ورود</span>
+            </div>
+            <div class="phase" id="phase2">
+                <span class="phase-number">۲</span>
+                <span>ثبت‌نام</span>
+            </div>
+        </div>
+
+        <!-- Alert messages -->
+        <div id="alert" class="alert"></div>
+
+        <!-- Panel 1: Login -->
+        <div id="loginPanel" class="panel active">
+            <!-- Step 1: Captcha -->
+            <div id="captchaStep">
+                <div class="captcha-container">
+                    <div class="captcha-image" id="captchaImage">
+                        <span class="text-muted">در حال بارگذاری...</span>
+                    </div>
+                    <button class="refresh-btn" id="refreshCaptcha" onclick="refreshCaptcha()" title="کپچای جدید">
+                        ↻
+                    </button>
+                </div>
+
+                <div class="form-group">
+                    <label for="captchaCode">کد کپچا</label>
+                    <input type="text" id="captchaCode" placeholder="کد تصویر را وارد کنید" autocomplete="off">
+                </div>
+
+                <div class="form-group">
+                    <label for="mobile">شماره موبایل</label>
+                    <input type="tel" id="mobile" placeholder="09123456789" pattern="09[0-9]{9}" inputmode="numeric" dir="ltr" style="text-align: left;">
+                </div>
+
+                <button class="btn btn-primary" id="sendOtpBtn" onclick="sendOTP()">
+                    ارسال کد تایید
+                </button>
+            </div>
+
+            <!-- Step 2: OTP -->
+            <div id="otpStep" style="display: none;">
+                <div class="form-group">
+                    <label>کد تایید پیامکی</label>
+                    <div class="otp-container" role="group">
+                        <input type="text" class="otp-input" data-index="0" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="one-time-code">
+                        <input type="text" class="otp-input" data-index="1" maxlength="1" inputmode="numeric" pattern="[0-9]">
+                        <input type="text" class="otp-input" data-index="2" maxlength="1" inputmode="numeric" pattern="[0-9]">
+                        <input type="text" class="otp-input" data-index="3" maxlength="1" inputmode="numeric" pattern="[0-9]">
+                        <input type="text" class="otp-input" data-index="4" maxlength="1" inputmode="numeric" pattern="[0-9]">
+                    </div>
+                </div>
+
+                <p class="text-muted mb-3" style="text-align: center;">
+                    کد تایید به شماره <span id="displayMobile"></span> ارسال شد
+                </p>
+
+                <button class="btn btn-primary" id="verifyOtpBtn" onclick="verifyOTP()">
+                    تایید و ورود
+                </button>
+
+                <button class="btn btn-secondary mt-3" onclick="backToCaptcha()">
+                    بازگشت
+                </button>
+            </div>
+        </div>
+
+        <!-- Panel 2: Registration Form -->
+        <div id="registrationPanel" class="panel">
+            <div class="form-group">
+                <label for="postalCode">کد پستی (۱۰ رقم)</label>
+                <input type="text" id="postalCode" placeholder="۱۲۳۴۵۶۷۸۹۰" maxlength="10" dir="ltr" style="text-align: right;">
+            </div>
+
+            <div class="form-group">
+                <label for="businessName">عنوان واحد / شهرت کسبی</label>
+                <input type="text" id="businessName" placeholder="نام کسب‌وکار">
+            </div>
+
+            <div class="form-group">
+                <label>نوع ثبت‌نام</label>
+                <div class="type-toggle">
+                    <div class="type-option selected" onclick="selectType('individual')">
+                        <div class="type-option-title">انفرادی</div>
+                        <div class="type-option-desc">یک نفره</div>
+                    </div>
+                    <div class="type-option" onclick="selectType('partnership')">
+                        <div class="type-option-title">مشارکتی</div>
+                        <div class="type-option-desc">چند نفره</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="shebaNumber">شماره شبا (۲۴ رقم بدون IR)</label>
+                <input type="text" id="shebaNumber" placeholder="۹۶۰۵۶۰۰۸۳۲۸۸۸۰۳۱۰۳۲۷۶۰۰۱" maxlength="26" dir="ltr" style="text-align: right;">
+            </div>
+
+            <!-- Partners section (only for partnership) -->
+            <div id="partnersSection" class="partners-section">
+                <label>اطلاعات شرکا</label>
+                <table class="partners-table">
+                    <thead>
+                        <tr>
+                            <th>کد ملی</th>
+                            <th>درصد سهم</th>
+                            <th>نقش</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="partnersTableBody">
+                        <tr>
+                            <td><input type="text" class="partner-national-id" maxlength="10" placeholder="۱۲۳۴۵۶۷۸۹۰"></td>
+                            <td><input type="number" class="partner-share" min="1" max="100" placeholder="۵۰"></td>
+                            <td>
+                                <select class="partner-role">
+                                    <option value="شریک">شریک</option>
+                                    <option value="مدیر">مدیر</option>
+                                </select>
+                            </td>
+                            <td><button type="button" class="remove-partner-btn" onclick="removePartner(this)">حذف</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+                <button type="button" class="btn btn-secondary add-partner-btn" onclick="addPartner()">
+                    + افزودن شریک
+                </button>
+                <p class="text-muted mt-3">مجموع درصد سهام باید ۱۰۰٪ باشد</p>
+            </div>
+
+            <button class="btn btn-primary" id="submitBtn" onclick="submitRegistration()">
+                ثبت‌نام خودکار
+            </button>
+        </div>
+
+        <!-- Panel 3: Progress -->
+        <div id="progressPanel" class="panel">
+            <h2 style="text-align: center; margin-bottom: 24px;">در حال ثبت‌نام...</h2>
+
+            <div class="progress-container">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+
+                <div class="progress-steps" id="progressSteps">
+                    <div class="progress-step" data-step="1">
+                        <span class="progress-step-icon">۱</span>
+                        <span>ایجاد ثبت‌نام جدید</span>
+                    </div>
+                    <div class="progress-step" data-step="2">
+                        <span class="progress-step-icon">۲</span>
+                        <span>دریافت توکن SSO</span>
+                    </div>
+                    <div class="progress-step" data-step="3">
+                        <span class="progress-step-icon">۳</span>
+                        <span>احراز هویت سامانه ثبت</span>
+                    </div>
+                    <div class="progress-step" data-step="4">
+                        <span class="progress-step-icon">۴</span>
+                        <span>ثبت اطلاعات پایه</span>
+                    </div>
+                    <div class="progress-step" data-step="5">
+                        <span class="progress-step-icon">۵</span>
+                        <span>ثبت کد فعالیت</span>
+                    </div>
+                    <div class="progress-step" data-step="6">
+                        <span class="progress-step-icon">۶</span>
+                        <span>ثبت وضعیت مالیات</span>
+                    </div>
+                    <div class="progress-step" data-step="7">
+                        <span class="progress-step-icon">۷</span>
+                        <span>ثبت شماره شبا</span>
+                    </div>
+                    <div class="progress-step" data-step="8">
+                        <span class="progress-step-icon">۸</span>
+                        <span>ثبت اطلاعات شرکا</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel 4: Result -->
+        <div id="resultPanel" class="panel">
+            <div class="result-card">
+                <div class="result-icon success" id="resultIcon">✓</div>
+                <h2 class="result-title" id="resultTitle">ثبت‌نام با موفقیت انجام شد</h2>
+                <p class="text-muted" id="resultMessage"></p>
+
+                <div class="result-tracking" id="trackingSection" style="display: none;">
+                    <div class="result-tracking-label">کد رهگیری</div>
+                    <div class="result-tracking-code" id="trackingCode"></div>
+                </div>
+
+                <button class="btn btn-primary mt-3" onclick="startNew()">
+                    ثبت‌نام جدید
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State
+        let captchaKey = '';
+        let csrfToken = '';
+        let currentMobile = '';
+        let registrationType = 'individual';
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            initCaptcha();
+            initOtpInputs();
+        });
+
+        // Show/hide panels
+        function showPanel(panelId) {
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            document.getElementById(panelId).classList.add('active');
+
+            // Update phase indicator
+            const phase1 = document.getElementById('phase1');
+            const phase2 = document.getElementById('phase2');
+
+            if (panelId === 'loginPanel') {
+                phase1.className = 'phase active';
+                phase2.className = 'phase';
+            } else {
+                phase1.className = 'phase completed';
+                phase2.className = 'phase active';
+            }
+        }
+
+        // Show alert
+        function showAlert(message, type = 'error') {
+            const alert = document.getElementById('alert');
+            alert.textContent = message;
+            alert.className = `alert alert-${type} show`;
+            // Scroll to alert
+            alert.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // Keep error alerts visible longer, info/success shorter
+            const timeout = type === 'error' ? 10000 : 5000;
+            setTimeout(() => alert.classList.remove('show'), timeout);
+        }
+
+        // OTP Input Management
+        function initOtpInputs() {
+            const otpInputs = document.querySelectorAll('.otp-input');
+            otpInputs.forEach((input, index) => {
+                input.addEventListener('input', (e) => {
+                    if (!/^\d$/.test(e.target.value)) {
+                        e.target.value = '';
+                        input.classList.remove('filled');
+                        return;
+                    }
+                    input.classList.add('filled');
+                    if (index < 4) {
+                        otpInputs[index + 1].focus();
+                    }
+                });
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Backspace' && !e.target.value && index > 0) {
+                        otpInputs[index - 1].focus();
+                    }
+                });
+                input.addEventListener('paste', (e) => {
+                    e.preventDefault();
+                    const paste = (e.clipboardData || window.clipboardData).getData('text');
+                    const digits = paste.replace(/\D/g, '').slice(0, 5);
+                    digits.split('').forEach((d, i) => {
+                        if (otpInputs[i]) {
+                            otpInputs[i].value = d;
+                            otpInputs[i].classList.add('filled');
+                        }
+                    });
+                    if (digits.length > 0) {
+                        otpInputs[Math.min(digits.length, 4)].focus();
+                    }
+                });
+            });
+        }
+
+        function getOtpValue() {
+            return Array.from(document.querySelectorAll('.otp-input'))
+                .map(input => input.value).join('');
+        }
+
+        function clearOtpInputs() {
+            document.querySelectorAll('.otp-input').forEach(input => {
+                input.value = '';
+                input.classList.remove('filled', 'error');
+            });
+            const first = document.querySelector('.otp-input');
+            if (first) first.focus();
+        }
+
+        function setOtpError() {
+            document.querySelectorAll('.otp-input').forEach(i => i.classList.add('error'));
+            setTimeout(() => {
+                document.querySelectorAll('.otp-input').forEach(i => i.classList.remove('error'));
+            }, 2000);
+        }
+
+        // Initialize captcha
+        async function initCaptcha() {
+            try {
+                const response = await fetch('/api/start-tracker', { method: 'POST' });
+                const data = await response.json();
+
+                if (data.success && data.captcha) {
+                    captchaKey = data.captcha.key;
+                    csrfToken = data.captcha.csrfToken;
+                    document.getElementById('captchaImage').innerHTML =
+                        `<img src="${data.captcha.imageData}" alt="captcha">`;
+                } else {
+                    showAlert(data.error || 'خطا در بارگذاری کپچا');
+                }
+            } catch (err) {
+                showAlert('خطا در اتصال به سرور');
+            }
+        }
+
+        // Refresh captcha
+        async function refreshCaptcha() {
+            const btn = document.getElementById('refreshCaptcha');
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/api/refresh-captcha', { method: 'POST' });
+                const data = await response.json();
+
+                if (data.success && data.captcha) {
+                    captchaKey = data.captcha.key;
+                    csrfToken = data.captcha.csrfToken;
+                    document.getElementById('captchaImage').innerHTML =
+                        `<img src="${data.captcha.imageData}" alt="captcha">`;
+                } else {
+                    showAlert(data.error || 'خطا در بارگذاری کپچا');
+                }
+            } catch (err) {
+                showAlert('خطا در اتصال به سرور');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        // Send OTP
+        async function sendOTP() {
+            const mobile = document.getElementById('mobile').value.trim();
+            const captchaCode = document.getElementById('captchaCode').value.trim();
+
+            if (!mobile || mobile.length !== 11) {
+                showAlert('لطفاً شماره موبایل معتبر وارد کنید');
+                return;
+            }
+
+            if (!captchaCode) {
+                showAlert('لطفاً کد کپچا را وارد کنید');
+                return;
+            }
+
+            const btn = document.getElementById('sendOtpBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> در حال ارسال...';
+
+            try {
+                const response = await fetch('/api/send-otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        mobile,
+                        captchaCode,
+                        captchaKey,
+                        csrfToken
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    currentMobile = mobile;
+                    document.getElementById('displayMobile').textContent = mobile;
+                    document.getElementById('captchaStep').style.display = 'none';
+                    document.getElementById('otpStep').style.display = 'block';
+                    showAlert('کد تایید ارسال شد', 'success');
+                    // Focus first OTP input
+                    const firstOtp = document.querySelector('.otp-input');
+                    if (firstOtp) firstOtp.focus();
+                } else {
+                    showAlert(data.error || 'خطا در ارسال کد');
+                    refreshCaptcha();
+                }
+            } catch (err) {
+                showAlert('خطا در اتصال به سرور');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'ارسال کد تایید';
+            }
+        }
+
+        // Verify OTP
+        async function verifyOTP() {
+            const otpCode = getOtpValue();
+
+            if (!otpCode || otpCode.length !== 5) {
+                showAlert('لطفاً کد ۵ رقمی را وارد کنید');
+                setOtpError();
+                return;
+            }
+
+            const btn = document.getElementById('verifyOtpBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> در حال تایید...';
+
+            try {
+                const response = await fetch('/api/verify-otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        mobile: currentMobile,
+                        otpCode,
+                        csrfToken
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showAlert('ورود موفق!', 'success');
+                    showPanel('registrationPanel');
+                } else {
+                    showAlert(data.error || 'کد نامعتبر است');
+                    setOtpError();
+                    clearOtpInputs();
+                }
+            } catch (err) {
+                showAlert('خطا در اتصال به سرور');
+                setOtpError();
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'تایید و ورود';
+            }
+        }
+
+        // Back to captcha
+        function backToCaptcha() {
+            document.getElementById('captchaStep').style.display = 'block';
+            document.getElementById('otpStep').style.display = 'none';
+            document.getElementById('captchaCode').value = '';
+            clearOtpInputs();
+            refreshCaptcha();
+        }
+
+        // Select registration type
+        function selectType(type) {
+            registrationType = type;
+            document.querySelectorAll('.type-option').forEach(opt => opt.classList.remove('selected'));
+            event.currentTarget.classList.add('selected');
+
+            const partnersSection = document.getElementById('partnersSection');
+            if (type === 'partnership') {
+                partnersSection.classList.add('show');
+            } else {
+                partnersSection.classList.remove('show');
+            }
+        }
+
+        // Add partner row
+        function addPartner() {
+            const tbody = document.getElementById('partnersTableBody');
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td><input type="text" class="partner-national-id" maxlength="10" placeholder="۱۲۳۴۵۶۷۸۹۰"></td>
+                <td><input type="number" class="partner-share" min="1" max="100" placeholder="۵۰"></td>
+                <td>
+                    <select class="partner-role">
+                        <option value="شریک">شریک</option>
+                        <option value="مدیر">مدیر</option>
+                    </select>
+                </td>
+                <td><button type="button" class="remove-partner-btn" onclick="removePartner(this)">حذف</button></td>
+            `;
+            tbody.appendChild(row);
+        }
+
+        // Remove partner row
+        function removePartner(btn) {
+            const tbody = document.getElementById('partnersTableBody');
+            if (tbody.children.length > 1) {
+                btn.closest('tr').remove();
+            } else {
+                showAlert('حداقل یک شریک باید وجود داشته باشد');
+            }
+        }
+
+        // Get partners data
+        function getPartnersData() {
+            const rows = document.querySelectorAll('#partnersTableBody tr');
+            const partners = [];
+
+            rows.forEach(row => {
+                const nationalId = row.querySelector('.partner-national-id').value.trim();
+                const sharePercent = parseInt(row.querySelector('.partner-share').value) || 0;
+                const role = row.querySelector('.partner-role').value;
+
+                if (nationalId) {
+                    partners.push({ nationalId, sharePercent, role });
+                }
+            });
+
+            return partners;
+        }
+
+        // Helper to convert Persian digits to English
+        function persianToEnglish(str) {
+            const persianDigits = '۰۱۲۳۴۵۶۷۸۹';
+            return str.replace(/[۰-۹]/g, d => persianDigits.indexOf(d));
+        }
+
+        // Highlight invalid field
+        function setFieldError(fieldId, hasError) {
+            const field = document.getElementById(fieldId);
+            if (hasError) {
+                field.style.borderColor = 'var(--color-error)';
+                field.style.boxShadow = '0 0 0 3px rgba(220, 38, 38, 0.1)';
+            } else {
+                field.style.borderColor = '';
+                field.style.boxShadow = '';
+            }
+        }
+
+        // Submit registration
+        async function submitRegistration() {
+            console.log('submitRegistration called');
+
+            // Clear previous errors
+            setFieldError('postalCode', false);
+            setFieldError('businessName', false);
+            setFieldError('shebaNumber', false);
+
+            let postalCode = document.getElementById('postalCode').value.trim();
+            const businessName = document.getElementById('businessName').value.trim();
+            let shebaNumber = document.getElementById('shebaNumber').value.trim().replace(/^IR/i, '');
+
+            // Convert Persian digits to English
+            postalCode = persianToEnglish(postalCode);
+            shebaNumber = persianToEnglish(shebaNumber);
+
+            console.log('Values:', { postalCode, businessName, shebaNumber, lengths: { postal: postalCode.length, sheba: shebaNumber.length } });
+
+            // Validation
+            if (!postalCode || postalCode.length !== 10) {
+                showAlert('کد پستی باید ۱۰ رقم باشد (وارد شده: ' + postalCode.length + ' رقم)');
+                setFieldError('postalCode', true);
+                document.getElementById('postalCode').focus();
+                return;
+            }
+
+            if (!businessName) {
+                showAlert('عنوان واحد الزامی است');
+                setFieldError('businessName', true);
+                document.getElementById('businessName').focus();
+                return;
+            }
+
+            if (!shebaNumber || shebaNumber.length !== 24) {
+                showAlert('شماره شبا باید ۲۴ رقم باشد (بدون IR) - وارد شده: ' + shebaNumber.length + ' رقم');
+                setFieldError('shebaNumber', true);
+                document.getElementById('shebaNumber').focus();
+                return;
+            }
+
+            let partners = [];
+            if (registrationType === 'partnership') {
+                partners = getPartnersData();
+                if (partners.length === 0) {
+                    showAlert('حداقل یک شریک باید وارد شود');
+                    return;
+                }
+
+                const totalShare = partners.reduce((sum, p) => sum + p.sharePercent, 0);
+                if (totalShare !== 100) {
+                    showAlert(`مجموع درصد سهام باید ۱۰۰٪ باشد (فعلی: ${totalShare}٪)`);
+                    return;
+                }
+            }
+
+            // Disable button and show loading
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner"></span> در حال پردازش...';
+
+            // Show progress panel
+            showPanel('progressPanel');
+
+            // Simulate progress updates
+            const steps = document.querySelectorAll('.progress-step');
+            const progressFill = document.getElementById('progressFill');
+
+            try {
+                console.log('Making API call with data:', { postalCode, businessName, registrationType, shebaNumber, partners });
+                const response = await fetch('/api/register/complete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        postalCode,
+                        businessName,
+                        registrationType,
+                        shebaNumber,
+                        partners
+                    })
+                });
+
+                const data = await response.json();
+                console.log('API response:', data);
+
+                // Update progress based on response
+                if (data.data && data.data.steps) {
+                    data.data.steps.forEach((step, index) => {
+                        if (index < steps.length) {
+                            steps[index].classList.add(step.success ? 'completed' : 'error');
+                        }
+                        progressFill.style.width = `${((index + 1) / steps.length) * 100}%`;
+                    });
+                }
+
+                // Show result
+                setTimeout(() => {
+                    if (data.success) {
+                        showResult(true, data.message, data.data?.trackingCode || data.data?.guid);
+                    } else {
+                        showResult(false, data.error);
+                    }
+                }, 500);
+
+            } catch (err) {
+                console.error('API Error:', err);
+                showResult(false, 'خطا در اتصال به سرور: ' + err.message);
+            } finally {
+                // Re-enable button
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'ثبت‌نام خودکار';
+            }
+        }
+
+        // Show result
+        function showResult(success, message, trackingCode = null) {
+            const resultIcon = document.getElementById('resultIcon');
+            const resultTitle = document.getElementById('resultTitle');
+            const resultMessage = document.getElementById('resultMessage');
+            const trackingSection = document.getElementById('trackingSection');
+            const trackingCodeEl = document.getElementById('trackingCode');
+
+            if (success) {
+                resultIcon.className = 'result-icon success';
+                resultIcon.textContent = '✓';
+                resultTitle.textContent = 'ثبت‌نام با موفقیت انجام شد';
+            } else {
+                resultIcon.className = 'result-icon error';
+                resultIcon.textContent = '✕';
+                resultTitle.textContent = 'خطا در ثبت‌نام';
+            }
+
+            resultMessage.textContent = message || '';
+
+            if (trackingCode) {
+                trackingSection.style.display = 'block';
+                trackingCodeEl.textContent = trackingCode;
+            } else {
+                trackingSection.style.display = 'none';
+            }
+
+            showPanel('resultPanel');
+        }
+
+        // Start new registration
+        function startNew() {
+            // Reset form
+            document.getElementById('postalCode').value = '';
+            document.getElementById('businessName').value = '';
+            document.getElementById('shebaNumber').value = '';
+            document.getElementById('partnersTableBody').innerHTML = `
+                <tr>
+                    <td><input type="text" class="partner-national-id" maxlength="10" placeholder="۱۲۳۴۵۶۷۸۹۰"></td>
+                    <td><input type="number" class="partner-share" min="1" max="100" placeholder="۵۰"></td>
+                    <td>
+                        <select class="partner-role">
+                            <option value="شریک">شریک</option>
+                            <option value="مدیر">مدیر</option>
+                        </select>
+                    </td>
+                    <td><button type="button" class="remove-partner-btn" onclick="removePartner(this)">حذف</button></td>
+                </tr>
+            `;
+
+            // Reset progress
+            document.querySelectorAll('.progress-step').forEach(step => {
+                step.classList.remove('completed', 'active', 'error');
+            });
+            document.getElementById('progressFill').style.width = '0%';
+
+            // Go back to registration
+            showPanel('registrationPanel');
+        }
+    </script>
+</body>
+
+</html>

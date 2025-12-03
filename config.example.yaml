@@ -1,0 +1,333 @@
+# Auto Tax Gov Configuration
+# Copy this file to config.yaml and update with your values
+
+# Server settings
+server:
+  port: 8080
+  read_timeout: 30s
+  write_timeout: 30s
+  idle_timeout: 120s
+
+# HTTP client settings
+http:
+  timeout: 60s
+  max_redirects: 20
+  verify_tls: true
+  save_cookies: true
+  follow_redirects: true
+  output_dir: redirect_steps
+
+# Services configuration
+services:
+  # MyGovAuth - Government SSO authentication service
+  mygovauth:
+    base_url: "https://sso.my.gov.ir"
+    auth_url: "https://sso.my.gov.ir/oauth2/authorize"
+    login_url: "https://sso.my.gov.ir/login"
+    logged_in_url: "https://sso.my.gov.ir/logged-in"
+    captcha_url: "https://sso.my.gov.ir/client/v1/captcha"
+    send_otp_url: "https://sso.my.gov.ir/sendOtp"
+    verify_otp_url: "https://sso.my.gov.ir/login_otp"
+    # Authorization header for captcha requests (base64 encoded client credentials)
+    auth_header: "Basic cHdhLnVzZXI6MDFhbnNraXludXd2czRzYnRvamE="
+
+  # MyTax - Tax portal service (my.tax.gov.ir)
+  mytax:
+    base_url: "https://my.tax.gov.ir"
+    callback_url: "https://my.tax.gov.ir/myiran/sso"
+    dashboard_url: "https://my.tax.gov.ir/Page/Dashboard"
+    registration_url: "https://my.tax.gov.ir/Page/NewRegistration/"
+    basic_info_url: "https://my.tax.gov.ir/Page/BasicInfo/"
+    partners_url: "https://my.tax.gov.ir/Page/Partners/"
+    accounts_url: "https://my.tax.gov.ir/Page/Accounts/"
+    add_account_url: "https://my.tax.gov.ir/Page/AddAccount/"
+    client_id: "my.tax"
+    redirect_uri: "https://my.tax.gov.ir/myiran/sso"
+
+  # Enamad - E-trust symbol service (reg2.enamad.ir)
+  enamad:
+    base_url: "https://reg2.enamad.ir"
+    callback_url: "https://reg2.enamad.ir/callback"
+    client_id: "enamad"
+    redirect_uri: "https://reg2.enamad.ir/callback"
+
+  # Mojavez - Business licensing service (mojavez.ir)
+  mojavez:
+    base_url: "https://mojavez.ir"
+    callback_url: "https://mojavez.ir/callback"
+    client_id: "mojavez"
+    redirect_uri: "https://mojavez.ir/callback"
+
+  # RegisterTax - Tax registration portal (register.tax.gov.ir)
+  # Used for Step 2 (Basic Info) form submission
+  # Requires cross-domain auth flow: my.tax.gov.ir → register.tax.gov.ir
+  registertax:
+    base_url: "https://register.tax.gov.ir"
+    token_login_url: "https://register.tax.gov.ir/Pages/Login/TokenLoginProcessWithSignout/"
+    home_page_url: "https://register.tax.gov.ir/Pages/Preaction/HomePage"
+    public_data_url: "https://register.tax.gov.ir/Pages/Preaction/PublicData"
+
+# Logging configuration
+log:
+  level: info # debug, info, warn, error
+  format: text # text or json
+
+# Form dropdown options for Step 2 (Basic Information)
+# Data researched from Iranian tax portal documentation and official sources:
+# - ماده ۹۶ قانون مالیات‌های مستقیم (مشاغل هشتگانه)
+# - https://ecunion.ir/ (اتحادیه کشوری کسب و کارهای مجازی)
+# - https://iran-asnaf.ir/ (اتاق اصناف ایران)
+form_options:
+  # دلیل ثبت‌نام - Registration Reasons
+  registration_reasons:
+    - value: "new_business"
+      label: "Creating a new business"
+      label_fa: "ایجاد یک کسب‌وکار جدید"
+    - value: "location_change"
+      label: "Change of business location"
+      label_fa: "تغییر محل فعالیت"
+    - value: "activity_change"
+      label: "Change of business activity"
+      label_fa: "تغییر نوع فعالیت"
+    - value: "ownership_transfer"
+      label: "Transfer of ownership"
+      label_fa: "انتقال مالکیت"
+    - value: "branch_opening"
+      label: "Opening a new branch"
+      label_fa: "افتتاح شعبه جدید"
+    - value: "business_restart"
+      label: "Restarting closed business"
+      label_fa: "شروع مجدد کسب‌وکار غیرفعال"
+
+  # نوع فعالیت - Activity Types
+  activity_types:
+    - value: "commercial"
+      label: "Commercial"
+      label_fa: "تجاری"
+    - value: "service"
+      label: "Service"
+      label_fa: "خدماتی"
+    - value: "production"
+      label: "Production/Manufacturing"
+      label_fa: "تولیدی"
+    - value: "mixed"
+      label: "Mixed (Commercial + Service)"
+      label_fa: "مختلط (تجاری و خدماتی)"
+    - value: "agricultural"
+      label: "Agricultural"
+      label_fa: "کشاورزی"
+    - value: "construction"
+      label: "Construction"
+      label_fa: "ساختمانی"
+
+  # مشاغل هشتگانه - Eight Category Jobs (License-Based Professions)
+  # Based on ماده ۹۶ قانون مالیات‌های مستقیم
+  eight_category_jobs:
+    - value: "doctors"
+      label: "Physicians & Medical Professionals"
+      label_fa: "پزشکان، پیراپزشکان، داروسازان و دامپزشکان"
+    - value: "lawyers"
+      label: "Legal Advocates"
+      label_fa: "وکلای دادگستری"
+    - value: "engineers"
+      label: "Supervising Engineers"
+      label_fa: "مهندسان ناظر"
+    - value: "court_experts"
+      label: "Court-Appointed Experts"
+      label_fa: "کارشناسان رسمی دادگستری"
+    - value: "merchants"
+      label: "Merchants (Card Holders)"
+      label_fa: "بازرگانان (دارندگان کارت بازرگانی)"
+    - value: "accountants"
+      label: "Certified Accountants"
+      label_fa: "حسابداران رسمی"
+    - value: "notaries"
+      label: "Notary Offices"
+      label_fa: "دفاتر اسناد رسمی"
+    - value: "insurance_agents"
+      label: "Insurance Agencies"
+      label_fa: "نمایندگی‌های بیمه"
+    - value: "other_group2_3"
+      label: "Other (Group 2 & 3)"
+      label_fa: "سایر (گروه دوم و سوم)"
+
+  # مشاغل انفرادی - Individual Jobs
+  individual_jobs:
+    - value: "taxi_driver"
+      label: "Taxi Driver"
+      label_fa: "راننده تاکسی"
+    - value: "truck_driver"
+      label: "Truck/Heavy Vehicle Driver"
+      label_fa: "راننده کامیون و وسایل نقلیه سنگین"
+    - value: "street_vendor"
+      label: "Street Vendor"
+      label_fa: "دستفروش"
+    - value: "handcraft"
+      label: "Handcraft Worker"
+      label_fa: "صنایع دستی"
+    - value: "home_business"
+      label: "Home-Based Business"
+      label_fa: "کسب‌وکار خانگی"
+    - value: "freelancer"
+      label: "Freelancer"
+      label_fa: "مشاغل آزاد"
+    - value: "other_non_individual"
+      label: "Other (Non-Individual)"
+      label_fa: "سایر (غیر انفرادی)"
+
+  # مجامع صنفی - Professional Guilds
+  professional_guilds:
+    - value: "chamber_of_guilds"
+      label: "Chamber of Guilds"
+      label_fa: "اتاق اصناف"
+    - value: "chamber_of_commerce"
+      label: "Chamber of Commerce"
+      label_fa: "اتاق بازرگانی"
+    - value: "engineering_organization"
+      label: "Engineering Organization"
+      label_fa: "سازمان نظام مهندسی"
+    - value: "medical_organization"
+      label: "Medical Organization"
+      label_fa: "سازمان نظام پزشکی"
+    - value: "bar_association"
+      label: "Bar Association"
+      label_fa: "کانون وکلای دادگستری"
+    - value: "accountants_society"
+      label: "Official Accountants Society"
+      label_fa: "جامعه حسابداران رسمی"
+    - value: "internet_business"
+      label: "Internet Business Guild"
+      label_fa: "صنف کسب‌وکارهای اینترنتی"
+    - value: "none"
+      label: "None"
+      label_fa: "هیچکدام"
+
+  # مجامع صنفی (dropdown) - Professional Assemblies
+  professional_assemblies:
+    - value: "chamber_of_guilds"
+      label: "Chamber of Guilds"
+      label_fa: "اتاق اصناف"
+    - value: "chamber_of_commerce"
+      label: "Chamber of Commerce"
+      label_fa: "اتاق بازرگانی"
+    - value: "cooperative_organization"
+      label: "Cooperative Organization"
+      label_fa: "سازمان تعاون"
+    - value: "none"
+      label: "None"
+      label_fa: "هیچکدام"
+
+  # اتحادیه صنفی - Guild Unions
+  guild_unions:
+    - value: "virtual_business_union"
+      label: "National Virtual Business Union"
+      label_fa: "اتحادیه کشوری صنف کسب‌وکارهای مجازی"
+    - value: "computer_services"
+      label: "Computer Services Union"
+      label_fa: "اتحادیه خدمات رایانه‌ای"
+    - value: "retail_union"
+      label: "Retail Stores Union"
+      label_fa: "اتحادیه فروشگاه‌های خرده‌فروشی"
+    - value: "restaurant_union"
+      label: "Restaurant & Food Union"
+      label_fa: "اتحادیه رستوران‌داران و صنف غذا"
+    - value: "transportation_union"
+      label: "Transportation Union"
+      label_fa: "اتحادیه حمل و نقل"
+    - value: "construction_union"
+      label: "Construction Union"
+      label_fa: "اتحادیه ساختمان و مسکن"
+    - value: "textile_union"
+      label: "Textile & Clothing Union"
+      label_fa: "اتحادیه پوشاک و نساجی"
+    - value: "gold_jewelry_union"
+      label: "Gold & Jewelry Union"
+      label_fa: "اتحادیه طلا و جواهر"
+    - value: "other"
+      label: "Other"
+      label_fa: "سایر"
+
+  # پروانه کسب - Business License Status
+  business_licenses:
+    - value: "have_license"
+      label: "I have a business license"
+      label_fa: "دارای جواز کسب می‌باشم"
+    - value: "no_license_pending"
+      label: "No license, application pending"
+      label_fa: "فعلا فاقد جواز کسب می‌باشم و در دست اقدام قرار دارد"
+    - value: "no_license_not_required"
+      label: "License not required for my activity"
+      label_fa: "فعالیت من نیاز به جواز کسب ندارد"
+    - value: "enamad_only"
+      label: "E-trust symbol (Enamad) only"
+      label_fa: "فقط نماد اعتماد الکترونیکی (اینماد) دارم"
+    - value: "home_business_permit"
+      label: "Home business permit"
+      label_fa: "مجوز کسب‌وکار خانگی"
+
+  # نوع مالکیت - Ownership Types
+  ownership_types:
+    - value: "owner"
+      label: "Owner"
+      label_fa: "مالک"
+    - value: "tenant"
+      label: "Tenant"
+      label_fa: "مستاجر"
+    - value: "free_use"
+      label: "Free Use / Borrowed"
+      label_fa: "استفاده رایگان / عاریه"
+    - value: "family_property"
+      label: "Family Property"
+      label_fa: "ملک خانوادگی"
+    - value: "partnership"
+      label: "Partnership"
+      label_fa: "مشارکتی"
+    - value: "government_property"
+      label: "Government Property"
+      label_fa: "ملک دولتی"
+
+# Default values for tax registration forms (happy path)
+# These values will be used when user doesn't provide input
+defaults:
+  # Basic Info form defaults (PublicData page)
+  basic_info:
+    registration_reason: "ایجاد یک کسب و کار جدید"
+    activity_type: "تجاری (همچنین فعالیتهای معاف از مالیات)"
+    eight_category_job: "سایر (گروه دوم و سوم)"
+    individual_job: "سایر (غیر انفرادی)"
+    professional_guild: "اتاق بازرگانی،صنایع و معادن و کشاورزی ایران"
+    professional_assembly: "اتاق بازرگانی،صنایع و معادن و کشاورزی ایران"
+    guild_union: "کسب و کاراینترنتی"
+    new_guild_union: "اتاق بازرگانی،صنایع،معادن و کشاورزی (کرمانشاه-کرمانشاه) - كرمانشاه"
+    business_license: "فعلا فاقد جواز کسب می باشم و در درست اقدام قرار دارد"
+    ownership_type: "اجاری"
+    financial_day_start: "1"
+    financial_month_start: "1"
+
+  # Member/Partner form defaults
+  member:
+    person_type: "حقیقی"
+    nationality: "33"  # Iran country code
+    birth_country: "33"
+    national_card_type: "کارت ملی هوشمند جدید"
+    partnership_type: "اختیاری (مستقیم)"
+    is_employed: "بله"
+    signature_authority: "ندارد"
+    responsibility_type: "هیچ کدام"
+    position: "شریک"
+    end_date: "0"  # 0 means ongoing/no end date
+
+  # INTA Code form defaults
+  # Path: [3] خدمات → [11] خدمات امور اداری... → [0] خدمات → [3110310]
+  inta_code:
+    level1: "[3] خدمات"
+    level2: "[11] خدمات امور اداری، حقوقی، حسابداری، کارشناسی، تحقیقاتی و رایانه ای"
+    level3: "[0] خدمات"
+    level4: "[3110310] [حقیقی/حقوقی] ارائه خدمات رایانه ای نظیر مشاوره، تهیه نقشه، طرح و یا اجرا و پشتیبانی سیستمهای رایانه ای"
+    code: "3110310"
+    description: "ارائه خدمات رایانه ای و مشاوره فناوری اطلاعات"
+    percent: 100
+
+  # VAT Status defaults
+  vat_status:
+    eligibility_type: "عدم مشمولیت"

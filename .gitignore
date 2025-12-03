@@ -27,6 +27,21 @@ go.work.sum
 # env file
 .env
 
+# Configuration (contains secrets)
+config.yaml
+config.yml
+
+# Log files
+*.log
+
+# Output files
+redirect_steps_*.md
+redirect_steps_*.json
+
+# Binary (root level only)
+/auto-tax-gov
+.DS_Store
+
 # Editor/IDE
 # .idea/
 # .vscode/

@@ -1,0 +1,32 @@
+GET https://register.tax.gov.ir/Pages/prelogin/edit/3240603136.4d797211-6b92-49bf-a39f-71a3e34c115f.3779108237.97736AA3-F72B-4095-B4E8-C1CDF33131C0 HTTP/1.1
+host: register.tax.gov.ir
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
+Sec-Fetch-Site: same-site
+Sec-Fetch-Mode: navigate
+Sec-Fetch-User: ?1
+Sec-Fetch-Dest: document
+sec-ch-ua: "Chromium";v="142", "Google Chrome";v="142", "Not_A Brand";v="99"
+sec-ch-ua-mobile: ?0
+sec-ch-ua-platform: "macOS"
+Referer: https://my.tax.gov.ir/
+Accept-Language: en-US,en;q=0.9,fa;q=0.8,ar;q=0.7
+Cookie: TaxpayerToken=eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2Q0JDLUhTNTEyIiwidHlwIjoiSldUIn0..v1fXa5Rc6Drwz_wcQT2Rvg.2yNmO4HWX-a28UFDXDMF0fbZn8XhItV8H-hO5BOn7nisBbHaYUU7fjET2VXkBZo3z9CzO-iqBettLpQIdOzqc7mxlJYjCtVea-u1-VLysKpEGBXD9MrpbPmK-pqxb5ZGvtq7yGqK_xjY45s8iLTFrnNJywdlN2rJiJWMxEFYq6TR_gGuICKCpUTBU2UFdd9-6JophYB4RikuVoQdkzozDF0PHXNCL8aDLyrzclkoq8Q3VkrKkPOOTbdCIUWc-EPm5xnfzrp64y1mQ-jaJYXFehu5zYdTVfbwotLqi-wCKladivYe1tKSjNVTvuHyEwUPhbXjzyzSuMXM8PHTVJlNVblXAT0_ELlWEXdcHk6VqYU.vOqFNKZYaryUPjB5pYzBFdwPYGFnDRvBa70sQe4g8j0; ASP.NET_SessionId=xxted1e4cihknzsbvuutllmz; cookiesession1=678B7719FD3A37A0F70252446F3BC0D4
+
+HTTP/1.1 302 Found
+Cache-Control: no-cache
+Pragma: no-cache
+Content-Type: text/html; charset=utf-8
+Expires: -1
+Location: /Pages/Preaction/HomePage
+Set-Cookie: PreregisterTAX.username=4D797211-6B92-49BF-A39F-71A3E34C115F; expires=Sat, 29-Nov-2025 12:14:30 GMT; path=/; HttpOnly; SameSite=Strict
+Set-Cookie: PreregisterTAX.status=AC8967A351923A962594CC57EA2B42B43C8A543CA962B3FBBA9554E402D9F1ACFA7858E952923FF57CEC05F7E00AA7B174D57525DE616718C23CE5F272A0A18D; expires=Sat, 29-Nov-2025 12:14:30 GMT; path=/; HttpOnly; SameSite=Strict
+Set-Cookie: status=AC8967A351923A962594CC57EA2B42B43C8A543CA962B3FBBA9554E402D9F1ACFA7858E952923FF57CEC05F7E00AA7B174D57525DE616718C23CE5F272A0A18D; expires=Sat, 29-Nov-2025 12:14:30 GMT; path=/; SameSite=Strict
+Date: Sat, 29 Nov 2025 10:14:30 GMT
+Content-Length: 142
+
+<html><head><title>Object moved</title></head><body>
+<h2>Object moved to <a href="/Pages/Preaction/HomePage">here</a>.</h2>
+</body></html>
